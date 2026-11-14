@@ -12,6 +12,9 @@ node_modules/
 /blob-report/
 **/playwright/.auth/
 
+# Local engine notes; kept outside the published repository.
+/docs/playground-engine-work.md
+
 # Local configuration, credentials and keys.
 .env
 .env.*

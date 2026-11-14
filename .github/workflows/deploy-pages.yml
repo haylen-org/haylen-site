@@ -32,6 +32,7 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:browser
+      - run: npm run test:playground
       - name: Check publication setup
         id: publication
         if: github.event_name != 'pull_request'
@@ -51,6 +52,13 @@ jobs:
           name: website-browser-review
           path: .cache/browser-results
           retention-days: 14
+      - name: Retain playground editor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playground-editor-review
+          path: .cache/playground-results
+          retention-days: 14
 
   publish:
     name: Compile every sample and publish complete static output
@@ -61,6 +69,7 @@ jobs:
     env:
       CPM_SOURCE_CACHE: ${{ github.workspace }}/haylen-engine/.cache/cpm
       HAYLEN_REQUIRE_ALL_DEMOS: '1'
+      HAYLEN_REQUIRE_PLAYGROUND_RUNTIME: '1'
       CLOUDFLARE_MAX_FILES: ${{ vars.CLOUDFLARE_MAX_FILES || '20000' }}
     steps:
       - uses: actions/checkout@v4
@@ -98,12 +107,16 @@ jobs:
       - run: npm ci
       - name: Discover and compile every sample with the official Haylen CLI
         run: npm run demos:build -- --engine-dir ./haylen-engine --jobs 3
-      - name: Inject compiled sample folders and direct index.html links
+      - name: Stage the editable Haylen web player for the playground
+        run: npm run playground:runtime -- --engine-dir ./haylen-engine
+      - name: Build the website, playground and complete sample folders
         run: npm run build
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - name: Open every compiled demo in a real browser
         run: npm run test:demos
+      - name: Test the editor, native hot reload and offline startup
+        run: npm run test:playground -- --project=chromium-desktop
       - name: Keep the complete publishable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -116,6 +129,13 @@ jobs:
         with:
           name: sample-runtime-review
           path: .cache/demo-results
+          retention-days: 14
+      - name: Retain playground review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playground-runtime-review
+          path: .cache/playground-results
           retention-days: 14
       - name: Upload the entire static site to Cloudflare Pages
         env:

@@ -49,7 +49,7 @@ export function pageSeo(site, page, title, description) {
       publisher: { '@id': `${site.url}/#organization` },
     },
     {
-      '@type': { home: 'WebPage', about: 'AboutPage', demos: 'CollectionPage' }[page],
+      '@type': { home: 'WebPage', about: 'AboutPage', demos: 'CollectionPage', playground: 'WebPage' }[page],
       '@id': `${canonical}#webpage`,
       url: canonical,
       name: title,
@@ -76,7 +76,12 @@ export function pageSeo(site, page, title, description) {
       '@id': `${canonical}#breadcrumb`,
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.url}/` },
-        { '@type': 'ListItem', position: 2, name: page === 'about' ? 'About' : 'Demos', item: canonical },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: { about: 'About', demos: 'Demos', playground: 'Playground' }[page],
+          item: canonical,
+        },
       ],
     });
   return {

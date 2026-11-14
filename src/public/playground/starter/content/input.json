@@ -1,0 +1,11 @@
+{
+  "actions": [
+    {
+      "name": "move",
+      "type": "axis",
+      "negative": ["key:left", "key:a", "virtual:left"],
+      "positive": ["key:right", "key:d", "virtual:right"]
+    },
+    { "name": "jump", "type": "button", "bindings": ["key:space", "key:w", "key:up", "virtual:jump"] }
+  ]
+}

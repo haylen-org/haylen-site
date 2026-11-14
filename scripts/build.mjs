@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadIconTokens } from './icons.mjs';
 import { pageSeo, sitemap, validateSite } from './seo.mjs';
+import { buildPlayground, buildOfflineCache } from './playground.mjs';
 import {
   filesUnder,
   maxAssetBytes,
@@ -64,6 +65,7 @@ function navLinks(page, prefix, mobile = false) {
     ['Home', './', 'home'],
     ['About', 'about/', 'about'],
     ['Demos', 'demos/', 'demos'],
+    ['Playground', 'playground/', 'playground'],
   ];
   return (
     links
@@ -171,6 +173,13 @@ async function main() {
       '../',
     ],
   ];
+  pages.push([
+    'playground',
+    'playground/index.html',
+    'Playground — Make a Lua game with Haylen',
+    'Edit Lua, build a 2D platform game and run it with Haylen in your browser. Keep your files locally, try hot reload and export your project.',
+    '../',
+  ]);
   await rm(dist, { force: true, recursive: true });
   await mkdir(dist, { recursive: true });
   await cp(path.join(root, 'src/public'), dist, { recursive: true });
@@ -187,6 +196,7 @@ async function main() {
   );
   await writeFile(path.join(dist, 'sitemap.xml'), sitemap(site, pages));
   const manifest = await publishDemos(samples);
+  const playgroundAvailable = await buildPlayground(root, dist);
   const published = Object.keys(manifest.samples).length;
   const categories = ['all', ...new Set(samples.map((sample) => sample.category.toLowerCase()))];
   const categoryNames = {
@@ -205,6 +215,8 @@ async function main() {
     .join('');
   const tokens = {
     ...icons,
+    PAGE_ASSETS: '',
+    PLAYGROUND_RUNTIME: playgroundAvailable ? 'available' : 'unavailable',
     SAMPLE_COUNT: samples.length,
     PUBLISHED_COUNT: published,
     CATEGORY_FILTERS: filters,
@@ -219,6 +231,10 @@ async function main() {
   for (const [page, filename, title, description, prefix] of pages) {
     const values = {
       ...tokens,
+      PAGE_ASSETS:
+        page === 'playground'
+          ? '<link rel="stylesheet" href="./editor.css" /><script type="module" src="./editor.js"></script>'
+          : '',
       ...pageSeo(site, page, title, description),
       TITLE: escapeHtml(title),
       DESCRIPTION: escapeHtml(description),
@@ -263,6 +279,7 @@ async function main() {
   );
   if (css.error || css.status !== 0)
     throw new Error(`Tailwind build failed: ${css.error?.message ?? css.status}`);
+  await buildOfflineCache(dist, playgroundAvailable);
   let count = 0;
   for await (const file of filesUnder(dist)) {
     if ((await stat(file)).size > maxAssetBytes)

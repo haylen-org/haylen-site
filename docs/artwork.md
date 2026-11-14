@@ -1,5 +1,11 @@
 # Identity, illustrations and icons
 
+## Playground
+
+Skybound's six SVG sprites under `src/public/playground/starter/content/` are original pixel-style vector artwork for this website's editable platform game. They depict an explorer, terrain, a coin, a creature, clouds and a goal flag. They are source assets, not screenshots or third-party game characters, and use the project's MIT license. The preview renders them through Haylen's vector asset API.
+
+The locally bundled CodeMirror editor, its language/highlight dependencies and fflate include their MIT notices in `dist/licenses/playground.txt`. esbuild also emits retained bundle notices. These packages do not load fonts, scripts or assets from a CDN.
+
 The official Haylen symbol and wordmark are copied unchanged from [`haylen-org/haylen/extras/images`](https://github.com/haylen-org/haylen/tree/main/extras/images):
 
 - `symbol.svg` → `src/public/favicon.svg`, also reused as the Home and About mark.

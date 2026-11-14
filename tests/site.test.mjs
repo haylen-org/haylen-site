@@ -46,6 +46,7 @@ test('each marketing page has consistent absolute search and social metadata', a
     ['index.html', '/'],
     ['about/index.html', '/about/'],
     ['demos/index.html', '/demos/'],
+    ['playground/index.html', '/playground/'],
   ]) {
     const html = await text(file);
     const canonical = `https://haylenengine.com${route}`;
@@ -65,8 +66,8 @@ test('each marketing page has consistent absolute search and social metadata', a
     assert.ok(graph.some((entry) => entry['@type'] === 'WebSite'));
     assert.ok(graph.some((entry) => entry['@type'] === 'SoftwareSourceCode'));
   }
-  assert.equal(titles.size, 3);
-  assert.equal(descriptions.size, 3);
+  assert.equal(titles.size, 4);
+  assert.equal(descriptions.size, 4);
   assert.match(await text('robots.txt'), /Sitemap: https:\/\/haylenengine\.com\/sitemap.xml/);
   assert.doesNotMatch(await text('sitemap.xml'), /404|web-demos|index.html|lastmod/);
   assert.match(await text('404.html'), /name="robots" content="noindex, follow"/);
@@ -95,6 +96,7 @@ for (const [page, filename] of [
   ['home', 'index.html'],
   ['about', 'about/index.html'],
   ['demos', 'demos/index.html'],
+  ['playground', 'playground/index.html'],
 ]) {
   test(`${page}: complete static structure, official branding and metadata`, async () => {
     const html = await text(filename);
@@ -110,7 +112,13 @@ for (const [page, filename] of [
 }
 
 test('all relative links, images and scripts resolve in the complete static build', async () => {
-  for (const file of ['index.html', 'about/index.html', 'demos/index.html', '404.html']) {
+  for (const file of [
+    'index.html',
+    'about/index.html',
+    'demos/index.html',
+    'playground/index.html',
+    '404.html',
+  ]) {
     const html = await text(file);
     for (const match of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
       const address = match[1];
@@ -169,6 +177,9 @@ test('all deployment files meet Cloudflare size and file-count limits', async ()
 test('production publishes every sample and the whole dist through one publisher', async () => {
   const workflow = await readFile(path.join(root, '.github/workflows/deploy-pages.yml'), 'utf8');
   assert.match(workflow, /HAYLEN_REQUIRE_ALL_DEMOS: '1'/);
+  assert.match(workflow, /HAYLEN_REQUIRE_PLAYGROUND_RUNTIME: '1'/);
+  assert.match(workflow, /npm run playground:runtime -- --engine-dir \.\/haylen-engine/);
+  assert.match(workflow, /npm run test:playground -- --project=chromium-desktop/);
   assert.match(workflow, /npm run demos:build -- --engine-dir \.\/haylen-engine/);
   assert.match(workflow, /npm run test:demos/);
   assert.match(workflow, /wrangler pages deploy dist/);

@@ -1,0 +1,190 @@
+<section class="playground" aria-labelledby="playground-title" data-runtime="{{PLAYGROUND_RUNTIME}}">
+  <div class="pg-heading">
+    <div>
+      <span class="pg-kicker">YOUR NEXT GAME STARTS HERE</span>
+      <h1 id="playground-title">Playground<span class="pg-beta">PREVIEW</span></h1>
+    </div>
+    <div class="pg-local">
+      {{ICON_SHIELD}}<span
+        >Files stay in this browser<small id="save-status" role="status">Opening your workspace…</small></span
+      >
+    </div>
+    <button class="pg-button" id="help-button" aria-label="Playground help">
+      {{ICON_BOOK}}<span>Quick start</span>
+    </button>
+  </div>
+  <div class="pg-toolbar" role="group" aria-label="Game controls">
+    <div class="pg-transport">
+      <button class="pg-button pg-play" id="play" disabled>{{ICON_PLAY}}<span>Play</span></button
+      ><button class="pg-button" id="pause" disabled>{{ICON_PAUSE}}<span>Pause</span></button
+      ><button class="pg-button" id="stop" disabled>{{ICON_STOP}}<span>Stop</span></button>
+    </div>
+    <label class="pg-hot"
+      ><input type="checkbox" id="hot-reload" checked />{{ICON_REFRESH}}<span>Hot reload</span></label
+    >
+    <div class="pg-project-actions">
+      <button class="pg-button" id="import-button">{{ICON_UPLOAD}}<span>Import</span></button
+      ><button class="pg-button" id="export-button">{{ICON_DOWNLOAD}}<span>Export ZIP</span></button
+      ><button class="pg-button pg-reset" id="reset-button" aria-label="Start again with the example">
+        {{ICON_REFRESH}}
+      </button>
+    </div>
+    <input type="file" id="file-import" multiple hidden /><input
+      type="file"
+      id="folder-import"
+      webkitdirectory
+      multiple
+      hidden
+    />
+  </div>
+  <nav class="pg-pane-nav" aria-label="Workspace panels">
+    <button data-pane="files">{{ICON_FOLDER}}Files</button
+    ><button data-pane="code" aria-current="true">{{ICON_CODE}}Code</button
+    ><button data-pane="game">{{ICON_GAMEPAD}}Game</button>
+  </nav>
+  <div class="pg-workspace" data-pane="code">
+    <aside class="pg-files" aria-label="Project files">
+      <div class="pg-panel-title">
+        <span>{{ICON_FOLDER}}PROJECT</span
+        ><span class="pg-file-tools"
+          ><button id="new-file" aria-label="New file" title="New file">{{ICON_FILE_PLUS}}</button
+          ><button id="new-folder" aria-label="New folder" title="New folder">
+            {{ICON_FOLDER_PLUS}}
+          </button></span
+        >
+      </div>
+      <div class="pg-project-name"><i></i><strong id="project-name">Skybound</strong><span>LOCAL</span></div>
+      <div id="file-tree" class="pg-tree" role="tree" aria-label="Files and folders"></div>
+      <div class="pg-file-actions">
+        <button class="pg-button" id="rename-item">Rename / move</button
+        ><button class="pg-button" id="delete-item" aria-label="Delete selected item">{{ICON_TRASH}}</button>
+      </div>
+      <div class="pg-drop-hint">
+        {{ICON_UPLOAD}}<span>Drop files or folders here.<small>Nothing is uploaded.</small></span>
+      </div>
+    </aside>
+    <section class="pg-code" aria-label="Code editor">
+      <div class="pg-editor-top">
+        <span class="pg-file-tab"
+          >{{ICON_FILE}}<span id="active-file">source/player.lua</span><i id="dirty-mark" hidden></i></span
+        ><span id="language-label">LUA</span>
+      </div>
+      <div id="code-editor" aria-label="Source code"></div>
+      <div id="asset-preview" hidden></div>
+      <div class="pg-editor-bottom">
+        <span id="cursor-position">Ln 1, Col 1</span><span>UTF-8<span id="file-size"></span></span>
+      </div>
+    </section>
+    <section class="pg-output" aria-label="Game and console">
+      <div class="pg-panel-title">
+        <span>{{ICON_GAMEPAD}}GAME PREVIEW</span><span id="runtime-state" role="status">Ready</span>
+      </div>
+      <div class="pg-preview" id="preview">
+        <div class="pg-preview-cover" id="preview-cover">
+          <div class="pg-cover-art" aria-hidden="true">
+            <img src="./starter/content/hero.svg" alt="" width="64" height="80" /><span></span
+            ><img src="./starter/content/coin.svg" alt="" width="28" height="28" />
+          </div>
+          <h2>Meet Skybound.</h2>
+          <p>A small game. A good place to start.</p>
+          <button class="pg-button pg-play" id="preview-play">{{ICON_PLAY}}Run the example</button
+          ><small>Powered by the real Haylen engine</small>
+        </div>
+      </div>
+      <div class="pg-game-bar">
+        <span id="game-hint">Arrows / A D to move · Space to jump</span
+        ><button id="restart-preview" aria-label="Restart game preview" title="Restart game preview">
+          {{ICON_REFRESH}}
+        </button>
+      </div>
+      <div class="pg-touch" role="group" aria-label="Touch game controls">
+        <button data-control="left" aria-label="Move left">←</button
+        ><button data-control="right" aria-label="Move right">→</button
+        ><button data-control="jump">Jump ↑</button>
+      </div>
+      <div class="pg-console-head">
+        <span>{{ICON_TERMINAL}}CONSOLE <b id="console-count">0</b></span
+        ><button id="clear-console">Clear</button>
+      </div>
+      <div class="pg-console" id="console" role="log" aria-label="Game console" aria-live="polite">
+        <p class="pg-console-welcome">Your game messages and errors appear here.</p>
+      </div>
+      <div class="pg-output-footer">
+        <span><i></i>Haylen · WebAssembly</span
+        ><span id="offline-status" role="status">Preparing offline use…</span>
+      </div>
+    </section>
+  </div>
+  <div class="pg-bottom">
+    <span
+      >{{ICON_CODE}}<span>Edit <strong>source/player.lua</strong> to change the jump and speed.</span></span
+    ><span
+      >Local workspace ·
+      <a href="https://github.com/haylen-org/haylen/tree/main/docs" target="_blank" rel="noopener noreferrer"
+        >Lua API {{ICON_EXTERNAL_LINK}}</a
+      ></span
+    >
+  </div>
+  <p class="pg-notice" id="workspace-notice" role="status"></p>
+  <noscript
+    ><p class="pg-notice">
+      Enable JavaScript to use the playground. The rest of the Haylen website works without it.
+    </p></noscript
+  >
+</section>
+<dialog class="pg-dialog" id="action-dialog">
+  <form id="action-form">
+    <h2 id="dialog-title">New file</h2>
+    <p id="dialog-description"></p>
+    <label id="path-label" for="path-input">Project path</label
+    ><input id="path-input" autocomplete="off" spellcheck="false" maxlength="240" />
+    <p id="dialog-error" role="alert"></p>
+    <div class="pg-dialog-actions">
+      <button type="button" class="pg-button" id="dialog-cancel">Cancel</button
+      ><button type="submit" class="pg-button pg-play" id="dialog-submit">Save</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="pg-dialog pg-help" id="help-dialog">
+  <div class="pg-kicker">A LITTLE CODE. A PLAYABLE GAME.</div>
+  <h2>Make it your own.</h2>
+  <p>Press Play to run Skybound. Open a file, change the code, and see what happens.</p>
+  <ol>
+    <li>
+      <strong>Explore the project.</strong> Lua lives in source/. Images live in content/. The level is a JSON
+      file.
+    </li>
+    <li>
+      <strong>Try a small change.</strong> Open source/player.lua and change speed or jumpSpeed. Hot reload
+      applies edits while the game runs.
+    </li>
+    <li>
+      <strong>Bring your own files.</strong> Drop images and code into the file panel, or import a project ZIP
+      with app.json at its root.
+    </li>
+    <li>
+      <strong>Keep a backup.</strong> Your work saves in this browser. Export a ZIP before clearing browser
+      data or moving to another device.
+    </li>
+  </ol>
+  <p>
+    After the offline indicator is ready, this page works without a connection. C++ and native plugins need
+    the Haylen build tools. This preview cannot interrupt an infinite loop in game code yet.
+  </p>
+  <button class="pg-button pg-play" id="close-help">Start creating {{ICON_ARROW_RIGHT}}</button>
+</dialog>
+<dialog class="pg-dialog" id="import-dialog">
+  <h2>Bring your files.</h2>
+  <p>
+    Import files into the selected folder, or replace the project with a ZIP. Nothing leaves your browser.
+    Existing file names require confirmation.
+  </p>
+  <div class="pg-import-options">
+    <button class="pg-button" id="choose-files">{{ICON_FILE}}Files or project ZIP</button
+    ><button class="pg-button" id="choose-folder">{{ICON_FOLDER}}Folder</button>
+  </div>
+  <p class="pg-import-limits">Up to 1,000 files and folders · 16 MiB per file · 64 MiB per project</p>
+  <button class="pg-button" id="close-import">Cancel</button>
+</dialog>
+<template id="file-icon">{{ICON_FILE}}</template><template id="folder-icon">{{ICON_FOLDER}}</template
+><template id="chevron-icon">{{ICON_CHEVRON}}</template>

@@ -27,7 +27,7 @@
     <link rel="icon" href="{{PREFIX}}favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="{{PREFIX}}assets/site.css" />
     <script src="{{PREFIX}}assets/main.js" defer></script>
-    {{STRUCTURED_DATA}}
+    {{PAGE_ASSETS}} {{STRUCTURED_DATA}}
   </head>
   <body data-page="{{PAGE}}">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -66,6 +66,7 @@
         <span>© {{YEAR}} Haylen contributors</span>
         <nav aria-label="Footer navigation">
           <a href="{{PREFIX}}about/">About</a><a href="{{PREFIX}}demos/">Demos</a
+          ><a href="{{PREFIX}}playground/">Playground</a
           ><a href="https://github.com/haylen-org/haylen/tree/main/docs">Documentation</a
           ><a href="https://github.com/haylen-org/haylen/blob/main/LICENSE">MIT license</a>
         </nav>

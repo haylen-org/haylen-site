@@ -8,7 +8,7 @@
 The website for Haylen, an open-source engine for games and apps.
 </p>
 
-Learn about the engine, its features, native plugins and supported platforms. Try the WebAssembly sample projects in your browser and read their source code.
+Learn about the engine, its features, native plugins and supported platforms. Try the WebAssembly samples or build a Lua game in the local browser playground.
 
 A static website built with Node.js and Tailwind CSS 4. The site and compiled demos are published together to Cloudflare Pages through GitHub Actions.
 

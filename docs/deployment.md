@@ -18,11 +18,13 @@ The preview uses Wrangler, including the actual Cloudflare headers and redirects
 ```sh
 npm ci
 npm run demos:build -- --engine-dir ../haylen --jobs 3
-HAYLEN_REQUIRE_ALL_DEMOS=1 npm run build
+npm run playground:runtime -- --engine-dir ../haylen
+HAYLEN_REQUIRE_ALL_DEMOS=1 HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run build
 npm test
 npx playwright install chromium firefox webkit
 npm run test:browser
 HAYLEN_REQUIRE_ALL_DEMOS=1 npm run test:demos
+HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run test:playground
 ```
 
 The upstream compiler needs Python 3.15, CMake, Ninja and a C++20 toolchain. It installs its pinned Emscripten and other tools. Linux prerequisites are listed in the workflow. The site's runtime and tests use Node.js 22; there are no Python site scripts.
@@ -42,6 +44,16 @@ dist/
   index.html
   about/index.html
   demos/index.html
+  playground/
+    index.html
+    editor.js
+    editor.css
+    runtime.html
+    runtime-host.js
+    starter.json
+    starter/
+    runtime/
+    sw.js
   404.html
   favicon.svg
   assets/
@@ -84,13 +96,27 @@ Push to `main` or run **Publish Haylen site and WASM demos** manually. Pull requ
 
 The manifest records the checked-out engine commit in CI. `main` intentionally tracks the latest engine; its integration can require maintenance when upstream contracts change. Native compilation is distinct from browser startup checks and from a complete gameplay test. Browser screenshots and traces are retained as workflow artifacts.
 
-The `/web-demos/*` headers enable cross-origin isolation required by the native browser runtime. All native resources are served from the same static origin. Browser capabilities and hardware still govern WebGPU, WebGL2 and audio availability.
+The `/web-demos/*` headers retain cross-origin isolation for native sample pages. The current single-thread Haylen web player does not require SharedArrayBuffer or isolation. All native resources are served from the same static origin. Browser capabilities and hardware still govern WebGPU, WebGL2 and audio availability.
+
+## Local browser playground
+
+`/playground/` contains the editor. Its Lua/JSON syntax highlighting, project tree, file/folder operations, drag-and-drop imports, image previews, ZIP imports/exports and IndexedDB saves run locally. Play/Pause/Stop, hot reload, diagnostics and touch controls talk to the actual editable Haylen player in a disposable iframe.
+
+After compiling the web player upstream, run `npm run playground:runtime -- --engine-dir ../haylen`. The command stages the four official runtime artifacts under ignored `.cache/web-player/`, validates the complete WASM/API and records its digest and available Git provenance. It does not rebuild or patch the engine. The site builder injects this player into `dist/playground/runtime/`. Production sets `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1` and fails when it is missing or invalid; a website-only build retains editing/export with Play disabled.
+
+The production workflow stages the player after sample compilation, tests the playground and publishes it in the same `dist/` upload. No extra Cloudflare service, API key, database or application server is needed.
+
+The browser service worker caches only the playground and its runtime/shared assets. Wait for **Ready offline** before disconnecting. First visits still require a download. Updates activate when old playground tabs close; they do not force-reload unsaved work. Files are local to this domain and browser profile. Export ZIPs as backups; clearing browser storage can remove the workspace and offline cache. Use one editing tab per workspace.
+
+The preview can recover ordinary Lua errors. It cannot reliably interrupt an infinite Lua/native loop on the engine's current single thread. C++ and native plugin compilation still use Haylen's normal toolchain.
+
+Run `npm run test:playground` for the editor/browser matrix and real player integration. Runtime cases skip when an optional local player is absent, but must run for production. CI verifies the editor in all configured browsers, then runs the complete player checks in Chromium after native compilation, matching the native-demo smoke-test environment. Local desktop checks also exercise the player in Firefox and WebKit. Results and screenshots stay in `.cache/playground-results/`.
 
 ## Search and social previews
 
-The confirmed production origin is **https://haylenengine.com**, configured in `src/data/site.json`. The build generates absolute canonical and social URLs, unique page metadata, safely serialized Schema.org JSON-LD, `sitemap.xml` and the sitemap declaration in `robots.txt`. The social cover is a local PNG with measured dimensions. Gallery search/filter URLs share the canonical `/demos/` URL. The sitemap lists only Home, About and Demos; the 404 and native sample responses are excluded from indexing.
+The confirmed production origin is **https://haylenengine.com**, configured in `src/data/site.json`. The build generates absolute canonical and social URLs, unique page metadata, safely serialized Schema.org JSON-LD, `sitemap.xml` and the sitemap declaration in `robots.txt`. The social cover is a local PNG with measured dimensions. Gallery search/filter URLs share the canonical `/demos/` URL. The sitemap lists Home, About, Demos and Playground; the 404, native sample responses and playground player/frame are excluded from indexing.
 
-Attach the domain to this Pages project and use HTTPS. After deployment, verify the domain in [Google Search Console](https://search.google.com/search-console) and submit `https://haylenengine.com/sitemap.xml`. Neither the build nor this repository submits it automatically. Inspect the three production URLs with URL Inspection. Sitemaps and structured data help discovery and interpretation, but do not guarantee indexing, rich results or rankings. For domain changes, update the single site configuration and configure a permanent redirect at Cloudflare from the old domain.
+Attach the domain to this Pages project and use HTTPS. After deployment, verify the domain in [Google Search Console](https://search.google.com/search-console) and submit `https://haylenengine.com/sitemap.xml`. Neither the build nor this repository submits it automatically. Inspect the four public page URLs with URL Inspection. Sitemaps and structured data help discovery and interpretation, but do not guarantee indexing, rich results or rankings. For domain changes, update the single site configuration and configure a permanent redirect at Cloudflare from the old domain.
 
 References: [Google canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls), [Google sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Open Graph](https://ogp.me/), [Schema.org SoftwareSourceCode](https://schema.org/SoftwareSourceCode).
 

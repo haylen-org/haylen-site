@@ -291,6 +291,7 @@ test('SEO URLs are absolute and search variants share the gallery canonical', as
     'https://haylenengine.com/',
     'https://haylenengine.com/about/',
     'https://haylenengine.com/demos/',
+    'https://haylenengine.com/playground/',
   ]);
   for (const url of urls) expect((await request.get(new URL(url).pathname)).status()).toBe(200);
   const missing = await request.get('/not-a-page');

@@ -1,0 +1,10 @@
+{
+  "name": "Skybound",
+  "identifier": "com.haylen.playground.skybound",
+  "version": "1.0.0",
+  "orientation": "landscape",
+  "window": { "title": "Skybound", "width": 960, "height": 540, "resizable": true },
+  "design": { "width": 960, "height": 540, "scaling": "fit" },
+  "lifecycle": { "pauseOnFocusLoss": false },
+  "clearColor": "#FF102C46"
+}

@@ -33,6 +33,17 @@ const uiIcons = {
   SHIELD: 'shield-check',
   MOON: 'moon',
   BOXES: 'boxes',
+  PLAY: 'play',
+  PAUSE: 'pause',
+  STOP: 'square',
+  FILE: 'file-code-2',
+  FILE_PLUS: 'file-plus-2',
+  FOLDER: 'folder',
+  FOLDER_PLUS: 'folder-plus',
+  UPLOAD: 'upload',
+  DOWNLOAD: 'download',
+  TRASH: 'trash-2',
+  CHEVRON: 'chevron-right',
 };
 const brands = {
   APPLE: faApple,

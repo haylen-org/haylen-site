@@ -2,7 +2,7 @@
 
 ## Purpose and public content
 
-This repository is the static website for [Haylen](https://github.com/haylen-org/haylen), an open-source C++ and Lua engine for games and apps. It contains Home, About and Web demos, plus a branded 404 page. Cloudflare Pages hosts both the website and the complete compiled WebAssembly sample folders.
+This repository is the static website for [Haylen](https://github.com/haylen-org/haylen), an open-source C++ and Lua engine for games and apps. It contains Home, About, Demos and a local browser Playground, plus a branded 404 page. Cloudflare Pages hosts the website, editable player and complete compiled WebAssembly sample folders.
 
 Write new public copy in clear, common English. Refer to the language as C++ without a version number in public copy, metadata and artwork. Keep actual toolchain requirements in technical deployment documentation. Explain what a feature does before naming its implementation. Say that Haylen is an engine for 2D games and apps. Describe graphics, physics, UI, audio, input, native plugins and supported platforms with specific examples. Do not add vague slogans, invented benchmarks, unsupported platform claims or claims of production certification. Haylen supports 2D today; future 3D support is not a current feature.
 
@@ -30,6 +30,12 @@ The README is a short project presentation, with the official mark and useful pr
 | `src/pages/home.html`                | Engine overview, feature illustrations, plugins, platforms and setup links.                                                    |
 | `src/pages/about.html`               | Architecture, native plugins, platform/API table, workflow and license.                                                        |
 | `src/pages/demos.html`               | Search/filter UI and the build-rendered sample catalogue.                                                                      |
+| `src/pages/playground.html`          | Static editor shell, local project controls, game preview and help dialogs.                                                    |
+| `src/playground/`                    | Browser editor, project/ZIP storage, private player bridge, runtime host and scoped styles.                                    |
+| `src/public/playground/`             | Native canvas shell and the original editable Skybound starter project.                                                        |
+| `scripts/playground.mjs`             | Page-only bundles, complete browser license notices, player injection and offline cache generation.                            |
+| `scripts/playground-runtime.mjs`     | Official generic player staging, editable API/WASM checks and provenance.                                                      |
+| `tests/playground/`                  | Responsive editor, files, persistence, ZIP, real native runtime and offline browser contracts.                                 |
 | `src/data/samples.json`              | The single authoritative catalogue for sample metadata.                                                                        |
 | `src/data/site.json`                 | Public site identity, confirmed canonical origin and social image metadata.                                                    |
 | `src/tailwind.css`                   | Tailwind imports, explicit source detection and design tokens.                                                                 |
@@ -73,7 +79,7 @@ Official Haylen SVGs must remain byte for byte intact. Do not regenerate them, c
 
 The production origin is `https://haylenengine.com`, defined once in `src/data/site.json`. Update that configuration for an intentional domain migration; do not derive canonical URLs from preview hosts or browser requests. Use unique page titles/descriptions and absolute canonical, Open Graph and Twitter image URLs. Gallery query parameters canonicalize to `/demos/`. Read image dimensions from the actual PNG. Serialize JSON-LD safely and describe real visible content without invented ratings, reviews or FAQ entries.
 
-Generate `dist/sitemap.xml` with the three canonical marketing pages. Do not invent modification dates or add 404s, query combinations, native entry points or binary assets. The branded 404 has `noindex` and returns HTTP 404. Native demo response headers have `X-Robots-Tag: noindex, follow`; keep them crawlable so crawlers can read that directive. The gallery remains indexable. Submit the sitemap to the domain's verified Search Console property separately; generated files do not prove indexing or ranking.
+Generate `dist/sitemap.xml` with the four canonical public pages, including `/playground/`. Do not invent modification dates or add 404s, query combinations, native entry points or binary assets. The branded 404 has `noindex` and returns HTTP 404. Native sample/player/frame responses have `X-Robots-Tag: noindex, follow`; keep them crawlable so crawlers can read that directive. The gallery and playground editor remain indexable. Submit the sitemap to the domain's verified Search Console property separately; generated files do not prove indexing or ranking.
 
 ## Sample catalogue and generated output
 
@@ -108,18 +114,19 @@ Temporary keys for public demo releases belong in `.cache/sample-keys/` and neve
 
 ## Environment variables
 
-| Variable                     | Owner and meaning                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `HAYLEN_WEB_DEMOS_DIR`       | Site build input; defaults to `.cache/web-demos`.                                         |
-| `HAYLEN_DIST_DIR`            | Isolated test output; only `dist/` or a directory inside `.cache/` is permitted.          |
-| `HAYLEN_REQUIRE_ALL_DEMOS=1` | Require native output for every sample.                                                   |
-| `CLOUDFLARE_MAX_FILES`       | File-count limit for the actual Pages plan; defaults to 20000.                            |
-| `HAYLEN_PYTHON`              | Optional executable for the upstream compiler; defaults to `python3`.                     |
-| `HAYLEN_KEYS_DIR`            | Existing upstream content-key directory, when intentionally supplied.                     |
-| `CPM_SOURCE_CACHE`           | Upstream native dependency cache.                                                         |
-| `CLOUDFLARE_API_TOKEN`       | GitHub secret used only by Wrangler publication.                                          |
-| `CLOUDFLARE_ACCOUNT_ID`      | GitHub secret containing the target account ID.                                           |
-| `CLOUDFLARE_PAGES_PROJECT`   | GitHub variable or secret with the Direct Upload project name; variable takes precedence. |
+| Variable                              | Owner and meaning                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `HAYLEN_WEB_DEMOS_DIR`                | Site build input; defaults to `.cache/web-demos`.                                         |
+| `HAYLEN_DIST_DIR`                     | Isolated test output; only `dist/` or a directory inside `.cache/` is permitted.          |
+| `HAYLEN_REQUIRE_ALL_DEMOS=1`          | Require native output for every sample.                                                   |
+| `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1` | Require the verified editable player in `.cache/web-player/` for production.              |
+| `CLOUDFLARE_MAX_FILES`                | File-count limit for the actual Pages plan; defaults to 20000.                            |
+| `HAYLEN_PYTHON`                       | Optional executable for the upstream compiler; defaults to `python3`.                     |
+| `HAYLEN_KEYS_DIR`                     | Existing upstream content-key directory, when intentionally supplied.                     |
+| `CPM_SOURCE_CACHE`                    | Upstream native dependency cache.                                                         |
+| `CLOUDFLARE_API_TOKEN`                | GitHub secret used only by Wrangler publication.                                          |
+| `CLOUDFLARE_ACCOUNT_ID`               | GitHub secret containing the target account ID.                                           |
+| `CLOUDFLARE_PAGES_PROJECT`            | GitHub variable or secret with the Direct Upload project name; variable takes precedence. |
 
 ## Commands and test boundaries
 
@@ -159,6 +166,27 @@ Browser screenshots and traces belong in `.cache/browser-results/`, `.cache/demo
 Cloudflare Pages is the deployment target. The GitHub Actions workflow is the single publisher for site plus samples. Do not enable an additional native Pages Git auto-deployment for the same project, because it could replace the complete output with a website-only build. Pull requests run verification without production uploads. Production publication is enabled when `CLOUDFLARE_PAGES_PROJECT` is set; otherwise it is skipped with a setup notice. When enabled, production checks credentials, compiles every sample, builds and tests the complete site, then uploads all of `dist/` once. Missing token/account configuration or a failed native build must fail the enabled publication job.
 
 A manual browser upload ZIP must contain the **contents of `dist/` at its root**, with `index.html`, `_headers`, assets and `web-demos/` alongside each other. Do not put a `dist/` wrapper, source code, dependencies, caches or keys into that upload ZIP. Verify archive integrity and every demo entry point. Keep archives under ignored `release/` and make their names distinguishable from source archives.
+
+## Playground architecture and boundaries
+
+- `src/pages/playground.html` is the editor shell. `src/playground/editor.mjs` owns UI, CodeMirror states, local imports, diagnostics, save/reload scheduling and iframe lifecycle. `editor.css` styles only this page. These dependencies are bundled locally with esbuild, without a CDN, hydration or server.
+- `src/playground/project.mjs` owns validated relative paths, atomic project operations, package limits and incremental IndexedDB persistence. `archive.mjs` owns offline ZIP import/export and expansion checks. Never put user file names or file contents into `innerHTML`.
+- `src/playground/runtime.mjs` is the disposable native host; `src/public/playground/runtime.html` supplies its canvas. `bridge.mjs` authenticates source, origin and session at startup, then transfers a private MessagePort for commands/events. This avoids lost window messages during WebKit focus transitions. Close ports and discard stale sessions on restart. Only this frame owns `Module.haylen`; the canonical files stay in the editor. File operations reach the overlay through `setFile`/`removeFile`/`applyChanges`. Do not execute project HTML/JavaScript in the parent. Fresh Play and edits that require a restart recreate the host, avoiding stale WebKit audio/context work; ordinary hot reload retains it.
+- `src/public/playground/starter/` is the original Skybound Lua platformer with JSON data and SVG art. Asset API paths are relative to `content/`; package paths include that prefix. `source/main.lua` is the required entry point. Generate the starter manifest from real files, never a second maintained list.
+- `scripts/playground-runtime.mjs` stages the official generic player from `build/artifacts/web/player/` into ignored `.cache/web-player/`. Preserve its four runtime files and provenance manifest. Validate full WASM, file limits and the editable API. A protected sample build is not an editable player. Do not change Haylen engine code in this site repository.
+- `scripts/playground.mjs` bundles page-only assets, emits dependency notices, injects the verified player and generates the service worker/cache revision from actual output bytes. Production requires `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1`; a website-only build keeps the editor usable but disables Play with an explanation.
+- The service worker is a static browser asset scoped to `/playground/`, not a deployed Cloudflare Worker. Cache only the editor, starter, shared branding/styles and generic player. Use canonical extensionless frame URLs so cached redirected responses cannot break navigation. Do not cache all sample folders or force-activate updates while projects are open. Report offline readiness only after all assets are cached.
+- Projects stay on the device. IndexedDB is a convenience, exported ZIPs are backups. Keep limits at 1,000 files/folders, 16 MiB/file, 64 MiB/project and 1 MiB/editable text unless deliberately reviewed. Do not silently omit files, overwrite conflicts or lose empty folders on ZIP export. The current workspace assumes one editing tab; it does not merge concurrent edits.
+- An iframe cannot reliably interrupt infinite loops in Haylen's single-thread web runtime. Do not claim hard isolation or use JavaScript timers as proof of cancellation. Ordinary Lua errors must leave controls/editing usable, and fresh Run must recover corrected code. A valid-code revert with an empty, non-resuming reload report gets a fresh Run fallback.
+- `playwright.playground.config.mjs` and `tests/playground/` cover editor layouts, files, images, persistence, ZIPs and actual player execution/hot reload/offline restart. Runtime tests skip only when an optional local player is absent; production requires it. Evidence stays in ignored `.cache/playground-results/`.
+
+```sh
+npm run playground:runtime -- --engine-dir ../haylen
+HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run build
+npm run test:playground
+```
+
+Stage the player after compiling upstream web samples/player. The website-only verification job can test editing without native tools. Publication stages the player after compiling samples, verifies the complete playground, and uploads the same single static `dist/`.
 
 ## Git workflow and repository hygiene
 
