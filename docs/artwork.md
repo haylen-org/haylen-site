@@ -11,6 +11,6 @@ The Web demos images are real browser captures of the corresponding Haylen WebAs
 
 UI icons use [Lucide Static](https://lucide.dev/guide/static), distributed under the ISC license. Platform and GitHub marks use [Font Awesome Free Brands](https://github.com/FortAwesome/Font-Awesome), with its package license retained. `scripts/icons.mjs` embeds only selected icons as inline SVG during the Node build; no icon font, CDN or icon-library JavaScript is loaded by the browser. License notices are included in `dist/licenses/`.
 
-The social preview is a browser capture of the current Home page. The unchanged Haylen MIT license is distributed at `src/public/licenses/haylen.txt`.
+The animated hero is authored HTML, SVG and CSS. Its orbital paths, light trails and halos frame the unchanged official symbol. It requires no animation library, raster animation or WebGL context. The social preview is a 1200 × 630 browser capture of the Home hero, with the layout fitted to that share-card size and motion stopped. The unchanged Haylen MIT license is distributed at `src/public/licenses/haylen.txt`.
 
 Capability descriptions follow the [Haylen README](https://github.com/haylen-org/haylen) and [plugin documentation](https://github.com/haylen-org/haylen/blob/main/docs/platform/plugins.md). Haylen supports 2D today; the website does not advertise future 3D work as a current capability.

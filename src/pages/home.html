@@ -3,7 +3,7 @@
     <p class="eyebrow"><span class="status-dot"></span> HAYLEN ENGINE</p>
     <h1>One engine for<br /><span class="gradient-text">games and apps.</span></h1>
     <p class="hero-description">
-      Build 2D games and apps with C++20 and Lua. Add graphics, physics, sound and native plugins. Run your
+      Build 2D games and apps with C++ and Lua. Add graphics, physics, sound and native plugins. Run your
       project on desktop, mobile, TV and the web.
     </p>
     <div class="hero-actions">
@@ -16,37 +16,148 @@
       ><span>{{ICON_CHECK}} Free to use</span>
     </div>
   </div>
-  <div class="engine-visual" aria-label="Haylen has a C++20 core and a Lua API" role="img">
-    <div class="visual-halo"></div>
-    <svg class="visual-orbits" viewBox="0 0 440 460" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="orbit-color">
-          <stop stop-color="#60dbe8" stop-opacity=".45" />
-          <stop offset="1" stop-color="#ab8dff" stop-opacity=".12" />
-        </linearGradient>
-      </defs>
-      <circle cx="220" cy="210" r="173" stroke="url(#orbit-color)" />
-      <circle cx="220" cy="210" r="193" stroke="#8c9bd6" stroke-opacity=".14" stroke-dasharray="3 7" />
-      <ellipse
-        cx="220"
-        cy="210"
-        rx="190"
-        ry="72"
-        transform="rotate(-28 220 210)"
-        stroke="#a88aef"
-        stroke-opacity=".25"
-      />
-      <circle cx="70" cy="124" r="4" fill="#60dbe8" />
-      <circle cx="363" cy="308" r="4" fill="#ffab74" />
-    </svg>
-    <img class="visual-logo" src="favicon.svg" alt="" width="343" height="409" fetchpriority="high" />
+  <div class="engine-visual" data-motion="paused">
+    <div class="visual-scene" role="img" aria-label="The Haylen logo surrounded by light and moving orbits">
+      <div class="visual-aurora"></div>
+      <div class="visual-corona"></div>
+      <div class="visual-halo visual-halo-cyan"></div>
+      <div class="visual-halo visual-halo-violet"></div>
+      <div class="visual-halo visual-halo-amber"></div>
+      <svg class="visual-orbits" viewBox="0 0 440 430" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="orbit-color" x1="40" y1="40" x2="400" y2="370" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#60dbe8" stop-opacity=".65" />
+            <stop offset=".5" stop-color="#9071fc" stop-opacity=".12" />
+            <stop offset="1" stop-color="#ffab74" stop-opacity=".5" />
+          </linearGradient>
+          <linearGradient
+            id="trail-cyan"
+            x1="47.42"
+            y1="222.07"
+            x2="70.18"
+            y2="123.5"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#60dbe8" stop-opacity="0" />
+            <stop offset=".5" stop-color="#60dbe8" stop-opacity=".2" />
+            <stop offset="1" stop-color="#7cecf1" stop-opacity=".8" />
+          </linearGradient>
+          <linearGradient
+            id="trail-amber"
+            x1="392.58"
+            y1="197.93"
+            x2="369.82"
+            y2="296.5"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#ffab74" stop-opacity="0" />
+            <stop offset=".5" stop-color="#ffab74" stop-opacity=".12" />
+            <stop offset="1" stop-color="#ffb57e" stop-opacity=".6" />
+          </linearGradient>
+          <linearGradient
+            id="trail-violet"
+            x1="220"
+            y1="17"
+            x2="356.47"
+            y2="73.53"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#a9b8ff" stop-opacity=".7" />
+            <stop offset=".5" stop-color="#8598eb" stop-opacity=".2" />
+            <stop offset="1" stop-color="#8598eb" stop-opacity="0" />
+          </linearGradient>
+          <linearGradient id="energy-cyan" x1="220" y1="64" x2="74" y2="210" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#60dbe8" stop-opacity="0" />
+            <stop offset="1" stop-color="#60dbe8" stop-opacity=".85" />
+          </linearGradient>
+          <linearGradient
+            id="energy-amber"
+            x1="220"
+            y1="356"
+            x2="366"
+            y2="210"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stop-color="#ff7b22" stop-opacity="0" />
+            <stop offset="1" stop-color="#ffb57e" stop-opacity=".8" />
+          </linearGradient>
+        </defs>
+        <circle cx="220" cy="210" r="173" stroke="url(#orbit-color)" />
+        <g class="orbit-track orbit-track-energy" stroke-width="2" stroke-linecap="round">
+          <path d="M 220 64 A 146 146 0 0 0 74 210" stroke="url(#energy-cyan)" />
+          <path d="M 220 356 A 146 146 0 0 0 366 210" stroke="url(#energy-amber)" />
+        </g>
+        <g class="orbit-track orbit-track-outer">
+          <circle cx="220" cy="210" r="193" stroke="#8c9bd6" stroke-opacity=".2" stroke-dasharray="2 9" />
+          <path
+            d="M 220 17 A 193 193 0 0 1 356.47 73.53"
+            class="orbit-trail orbit-trail-violet"
+            stroke="url(#trail-violet)"
+            stroke-linecap="round"
+          />
+          <circle cx="220" cy="17" r="3" fill="#a9b8ff" />
+        </g>
+        <g class="orbit-track orbit-track-inner">
+          <path
+            class="orbit-trail orbit-trail-cyan"
+            d="M 47.42 222.07 A 173 173 0 0 1 70.18 123.5"
+            stroke="url(#trail-cyan)"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+          <path
+            class="orbit-trail orbit-trail-amber"
+            d="M 392.58 197.93 A 173 173 0 0 1 369.82 296.5"
+            stroke="url(#trail-amber)"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+          <circle cx="70.18" cy="123.5" r="10" fill="#60dbe8" fill-opacity=".09" />
+          <circle class="orbit-particle-cyan" cx="70.18" cy="123.5" r="4" fill="#7cecf1" />
+          <circle cx="369.82" cy="296.5" r="10" fill="#ffab74" fill-opacity=".1" />
+          <circle cx="369.82" cy="296.5" r="4" fill="#ffb57e" />
+        </g>
+        <g transform="rotate(-28 220 210)">
+          <ellipse cx="220" cy="210" rx="190" ry="72" stroke="#a88aef" stroke-opacity=".27" />
+          <ellipse
+            class="orbit-satellite"
+            cx="220"
+            cy="210"
+            rx="190"
+            ry="72"
+            pathLength="1000"
+            stroke="#c7b1ff"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-dasharray="1 999"
+          />
+        </g>
+        <g class="visual-sparks" fill="#b4c6e7">
+          <circle cx="108" cy="58" r="1.4" />
+          <circle cx="340" cy="116" r="1" />
+          <circle cx="98" cy="328" r="1.2" />
+          <circle cx="295" cy="369" r="1.5" />
+        </g>
+      </svg>
+      <div class="visual-floor"></div>
+      <img class="visual-logo" src="favicon.svg" alt="" width="343" height="409" fetchpriority="high" />
+    </div>
     <div class="visual-languages">
       <div class="language-chip">
-        <span class="language-code">C++</span><span><strong>C++20</strong><small>Engine core</small></span>
+        <span class="language-code">C++</span><span><strong>C++</strong><small>Engine core</small></span>
       </div>
       <div class="language-chip">
         {{ICON_CODE}}<span><strong>Lua</strong><small>Full engine API</small></span>
       </div>
+    </div>
+    <div class="motion-controls">
+      <button class="motion-toggle" type="button" aria-label="Pause animation" aria-pressed="false" hidden>
+        <svg class="motion-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path class="motion-pause" d="M4 3h3v10H4zm5 0h3v10H9z" />
+          <path class="motion-play" d="m5 3 8 5-8 5z" />
+        </svg>
+        <span>Pause animation</span>
+      </button>
     </div>
   </div>
 </section>
@@ -186,7 +297,7 @@
           Write app logic in Lua or use C++ directly. See changes with hot reload. Create, run, test and
           package projects from the command line.
         </p>
-        <div class="tag-row"><span>C++20</span><span>Lua / Varn</span><span>Hot reload</span></div>
+        <div class="tag-row"><span>C++</span><span>Lua / Varn</span><span>Hot reload</span></div>
       </div>
     </article>
   </div>

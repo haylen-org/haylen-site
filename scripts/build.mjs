@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadIconTokens } from './icons.mjs';
+import { pageSeo, sitemap, validateSite } from './seo.mjs';
 import {
   filesUnder,
   maxAssetBytes,
@@ -60,9 +61,9 @@ function validateSamples(samples) {
 
 function navLinks(page, prefix, mobile = false) {
   const links = [
-    ['Home', 'index.html', 'home'],
+    ['Home', './', 'home'],
     ['About', 'about/', 'about'],
-    ['Web demos', 'demos/', 'demos'],
+    ['Demos', 'demos/', 'demos'],
   ];
   return (
     links
@@ -142,26 +143,30 @@ async function main() {
   const samples = JSON.parse(await readText('src/data/samples.json'));
   validateSamples(samples);
   const layout = await readText('src/layout.html');
+  const site = validateSite(
+    JSON.parse(await readText('src/data/site.json')),
+    await readFile(path.join(root, 'src/public/assets/og-cover.png')),
+  );
   const icons = await loadIconTokens();
   const pages = [
     [
       'home',
       'index.html',
-      'Haylen — An engine for games and apps',
-      'Build 2D games and apps with C++20, Lua and native plugins. Haylen is an open-source engine for desktop, mobile, TV and the web.',
+      'Haylen Engine — Open-source C++ and Lua games & apps',
+      'Build 2D games and apps with C++, Lua and native plugins. Haylen is an open-source engine for desktop, mobile, TV and the web.',
       '',
     ],
     [
       'about',
       'about/index.html',
-      'About Haylen — C++20, Lua and native plugins',
-      'Learn how Haylen works: a C++20 engine, a Lua API, shared app projects and native plugins for each platform.',
+      'About Haylen — C++, Lua and native plugins',
+      'Learn how Haylen works: a C++ engine, a Lua API, shared app projects and native plugins for each platform.',
       '../',
     ],
     [
       'demos',
       'demos/index.html',
-      'Web demos — Haylen Engine',
+      'Demos — Play Haylen games and apps in your browser',
       'Try Haylen games, apps and engine tests in your browser. Open each WebAssembly demo in a new tab and read its source code.',
       '../',
     ],
@@ -174,8 +179,13 @@ async function main() {
     path.join(root, 'node_modules/@fortawesome/free-brands-svg-icons/LICENSE.txt'),
     path.join(dist, 'licenses/fontawesome.txt'),
   );
-  for (const filename of ['_headers', '_redirects', 'robots.txt'])
+  for (const filename of ['_headers', '_redirects'])
     await cp(path.join(root, filename), path.join(dist, filename));
+  await writeFile(
+    path.join(dist, 'robots.txt'),
+    replaceTokens(await readText('robots.txt'), { SITE_URL: site.url }),
+  );
+  await writeFile(path.join(dist, 'sitemap.xml'), sitemap(site, pages));
   const manifest = await publishDemos(samples);
   const published = Object.keys(manifest.samples).length;
   const categories = ['all', ...new Set(samples.map((sample) => sample.category.toLowerCase()))];
@@ -200,10 +210,16 @@ async function main() {
     CATEGORY_FILTERS: filters,
     DEMO_CARDS: samples.map((sample) => card(sample, manifest, icons)).join('\n'),
     YEAR: new Date().getUTCFullYear(),
+    SITE_NAME: escapeHtml(site.name),
+    SOCIAL_IMAGE: `${site.url}/${site.socialImage}`,
+    SOCIAL_IMAGE_ALT: escapeHtml(site.socialImageAlt),
+    SOCIAL_IMAGE_WIDTH: site.imageWidth,
+    SOCIAL_IMAGE_HEIGHT: site.imageHeight,
   };
   for (const [page, filename, title, description, prefix] of pages) {
     const values = {
       ...tokens,
+      ...pageSeo(site, page, title, description),
       TITLE: escapeHtml(title),
       DESCRIPTION: escapeHtml(description),
       PAGE: page,
@@ -217,11 +233,15 @@ async function main() {
     await writeFile(destination, replaceTokens(layout, { ...values, BODY: body }));
   }
   const errorBody =
-    '<section class="container error-page"><p class="eyebrow">404</p><h1>Page not found.</h1><p>This address does not match a page on the Haylen website.</p><a class="button button-primary" href="/index.html">Go to the home page</a></section>';
+    '<section class="container error-page"><p class="eyebrow">404</p><h1>Page not found.</h1><p>This address does not match a page on the Haylen website.</p><a class="button button-primary" href="/">Go to the home page</a></section>';
   await writeFile(
     path.join(dist, '404.html'),
     replaceTokens(layout, {
       ...tokens,
+      CANONICAL: `${site.url}/404.html`,
+      CANONICAL_LINK: '',
+      ROBOTS: 'noindex, follow',
+      STRUCTURED_DATA: '',
       TITLE: 'Page not found — Haylen',
       DESCRIPTION: 'Return to Haylen.',
       PAGE: '404',

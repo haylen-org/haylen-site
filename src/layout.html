@@ -6,20 +6,34 @@
     <meta name="theme-color" content="#090b10" />
     <title>{{TITLE}}</title>
     <meta name="description" content="{{DESCRIPTION}}" />
+    <meta name="robots" content="{{ROBOTS}}" />
+    {{CANONICAL_LINK}}
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{{TITLE}}" />
     <meta property="og:description" content="{{DESCRIPTION}}" />
-    <meta property="og:image" content="{{PREFIX}}assets/og-cover.png" />
+    <meta property="og:site_name" content="{{SITE_NAME}}" />
+    <meta property="og:url" content="{{CANONICAL}}" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="{{SOCIAL_IMAGE}}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="{{SOCIAL_IMAGE_WIDTH}}" />
+    <meta property="og:image:height" content="{{SOCIAL_IMAGE_HEIGHT}}" />
+    <meta property="og:image:alt" content="{{SOCIAL_IMAGE_ALT}}" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{TITLE}}" />
+    <meta name="twitter:description" content="{{DESCRIPTION}}" />
+    <meta name="twitter:image" content="{{SOCIAL_IMAGE}}" />
+    <meta name="twitter:image:alt" content="{{SOCIAL_IMAGE_ALT}}" />
     <link rel="icon" href="{{PREFIX}}favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="{{PREFIX}}assets/site.css" />
     <script src="{{PREFIX}}assets/main.js" defer></script>
+    {{STRUCTURED_DATA}}
   </head>
   <body data-page="{{PAGE}}">
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="{{PREFIX}}index.html" aria-label="Haylen home"
+        <a class="brand" href="{{PREFIX}}./" aria-label="Haylen home"
           ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
         /></a>
         <nav class="desktop-nav" aria-label="Main navigation">{{DESKTOP_NAV}}</nav>
@@ -42,7 +56,7 @@
     <main id="main">{{BODY}}</main>
     <footer class="site-footer">
       <div class="container footer-top">
-        <a class="brand" href="{{PREFIX}}index.html" aria-label="Haylen home"
+        <a class="brand" href="{{PREFIX}}./" aria-label="Haylen home"
           ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
         /></a>
         <p>An open-source engine for games and apps.</p>
@@ -51,11 +65,11 @@
       <div class="container footer-bottom">
         <span>© {{YEAR}} Haylen contributors</span>
         <nav aria-label="Footer navigation">
-          <a href="{{PREFIX}}about/">About</a><a href="{{PREFIX}}demos/">Web demos</a
+          <a href="{{PREFIX}}about/">About</a><a href="{{PREFIX}}demos/">Demos</a
           ><a href="https://github.com/haylen-org/haylen/tree/main/docs">Documentation</a
           ><a href="https://github.com/haylen-org/haylen/blob/main/LICENSE">MIT license</a>
         </nav>
-        <span>Made with C++20 and Lua.</span>
+        <span>Made with C++ and Lua.</span>
       </div>
     </footer>
   </body>

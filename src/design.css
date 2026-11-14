@@ -374,24 +374,107 @@ code {
   position: relative;
   width: 100%;
   max-width: 490px;
-  aspect-ratio: 1/1.08;
+  display: grid;
+  gap: 12px;
   isolation: isolate;
   justify-self: center;
 }
+.visual-scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 44/43;
+  pointer-events: none;
+}
+.visual-aurora,
+.visual-corona {
+  position: absolute;
+  border-radius: 50%;
+  aspect-ratio: 1;
+}
+.visual-aurora {
+  inset: 7% 9% auto;
+  opacity: 0.28;
+  background: conic-gradient(
+    from 20deg,
+    #00d4e900,
+    #00d4e92b 70deg,
+    #6530fb08 130deg,
+    #9431ff33 200deg,
+    #ff7b2229 270deg,
+    #00d4e900 350deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 25%, #000 48%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 25%, #000 48%, transparent 72%);
+  animation: aurora-turn 28s linear infinite;
+}
+.visual-corona {
+  inset: 11% 13% auto;
+  background: conic-gradient(
+    from 110deg,
+    transparent 15deg,
+    #00d4e9aa 75deg,
+    transparent 110deg,
+    transparent 160deg,
+    #a078ff99 210deg,
+    transparent 245deg,
+    #ff965b80 310deg,
+    transparent 350deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 64%, #000 64.3%, #000 64.8%, transparent 65.2%);
+  mask-image: radial-gradient(circle, transparent 64%, #000 64.3%, #000 64.8%, transparent 65.2%);
+  animation: aurora-turn 36s linear infinite reverse;
+}
+.visual-floor {
+  position: absolute;
+  width: 60%;
+  height: 10%;
+  left: 20%;
+  top: 76%;
+  background: radial-gradient(ellipse, #7444ff20, #0bc8e70b 35%, transparent 62%);
+  animation: floor-glow 8s ease-in-out infinite;
+}
 .visual-halo {
   position: absolute;
-  inset: 5%;
-  background:
-    radial-gradient(ellipse at 35% 40%, #2351db28, transparent 60%),
-    radial-gradient(ellipse at 70% 55%, #a34d6d20, transparent 60%);
+  inset: 9%;
   border-radius: 50%;
-  mask-image: radial-gradient(ellipse, black 20%, transparent 74%);
+  opacity: 0.3;
+}
+.visual-halo-cyan {
+  background: radial-gradient(ellipse at 28% 35%, #00d4e93b, transparent 54%);
+  animation: halo-cyan-drift 36s ease-in-out -6s infinite;
+}
+.visual-halo-violet {
+  background: radial-gradient(ellipse at 50% 58%, #7539fa48, transparent 54%);
+  animation: halo-violet-drift 44s ease-in-out -18s infinite;
+}
+.visual-halo-amber {
+  background: radial-gradient(ellipse at 72% 48%, #ff7b221f, transparent 50%);
+  animation: halo-amber-drift 40s ease-in-out -11s infinite;
 }
 .visual-orbits {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+.orbit-track {
+  transform-box: view-box;
+  transform-origin: 220px 210px;
+}
+.orbit-track-outer {
+  animation: orbit-turn 90s linear infinite reverse;
+}
+.orbit-track-inner {
+  animation: orbit-turn 32s linear infinite;
+}
+.orbit-track-energy {
+  animation: orbit-turn 44s linear infinite reverse;
+}
+.orbit-satellite {
+  animation: orbit-travel 22s linear infinite;
+}
+.visual-sparks {
+  animation: spark-glow 8s ease-in-out infinite alternate;
 }
 .visual-logo {
   position: absolute;
@@ -400,15 +483,132 @@ code {
   top: 20%;
   left: 28.5%;
   filter: drop-shadow(0 20px 24px #0006);
+  animation: logo-float 8s ease-in-out infinite;
 }
 .visual-languages {
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: 2%;
+  margin-inline: 12%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+.motion-controls {
+  display: flex;
+  justify-content: center;
+  min-height: 32px;
+}
+.motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #9aaac3;
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.motion-toggle:hover {
+  color: #dce5f5;
+  border-color: #34405a;
+  background: #151c29;
+}
+.motion-icon {
+  width: 12px;
+  height: 12px;
+}
+.motion-play,
+[data-motion='paused'] .motion-pause {
+  display: none;
+}
+[data-motion='paused'] .motion-play {
+  display: block;
+}
+.engine-visual[data-motion='paused'] *,
+.engine-visual[data-motion-visible='false'] *,
+.engine-visual[data-document-hidden='true'] * {
+  animation-play-state: paused !important;
+}
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes orbit-travel {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+@keyframes halo-cyan-drift {
+  0%,
+  100% {
+    transform: translate(-4%, 3%) scale(1);
+  }
+  33% {
+    transform: translate(6%, -5%) scale(1.06);
+  }
+  66% {
+    transform: translate(2%, 6%) scale(1.02);
+  }
+}
+@keyframes halo-violet-drift {
+  0%,
+  100% {
+    transform: translate(4%, -4%) scale(1.04);
+  }
+  33% {
+    transform: translate(-5%, 6%) scale(1);
+  }
+  66% {
+    transform: translate(-4%, -3%) scale(1.06);
+  }
+}
+@keyframes halo-amber-drift {
+  0%,
+  100% {
+    transform: translate(3%, 5%) scale(1.02);
+  }
+  33% {
+    transform: translate(-6%, -4%) scale(1.05);
+  }
+  66% {
+    transform: translate(5%, -3%) scale(1);
+  }
+}
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: perspective(900px) translateY(0) rotateX(2deg) rotateY(-7deg);
+  }
+  50% {
+    transform: perspective(900px) translateY(-8px) rotateX(-3deg) rotateY(7deg);
+  }
+}
+@keyframes aurora-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes floor-glow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(0.85);
+    opacity: 0.4;
+  }
+}
+@keyframes spark-glow {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 0.7;
+  }
 }
 .language-chip {
   display: flex;
@@ -1261,8 +1461,7 @@ code {
     font-size: 9px;
   }
   .visual-languages {
-    left: 8%;
-    right: 8%;
+    margin-inline: 8%;
     gap: 9px;
   }
   .language-code {
@@ -1406,8 +1605,7 @@ code {
     display: none;
   }
   .visual-languages {
-    left: 4%;
-    right: 4%;
+    margin-inline: 4%;
     gap: 8px;
   }
   .language-chip {
@@ -1670,10 +1868,8 @@ code {
     margin-top: 6px;
   }
   .visual-languages {
-    left: 8%;
-    right: 8%;
+    margin-inline: 8%;
     gap: 10px;
-    bottom: 1%;
   }
   .language-chip {
     padding: 10px 12px;
@@ -2007,8 +2203,7 @@ code {
     height: 22px;
   }
   .visual-languages {
-    left: 5%;
-    right: 5%;
+    margin-inline: 5%;
   }
   .catalogue-summary > span {
     font-size: 9px;

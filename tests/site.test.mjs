@@ -6,12 +6,90 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { filesUnder, verifyDemo } from '../scripts/demo-artifacts.mjs';
+import { pageSeo, validateSite } from '../scripts/seo.mjs';
+import { desktopContentTool } from '../scripts/build-web-demos.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = path.join(root, 'dist');
 const text = (name) => readFile(path.join(dist, name), 'utf8');
 const catalogue = JSON.parse(await readFile(path.join(root, 'src/data/samples.json'), 'utf8'));
 const manifest = JSON.parse(await text('web-demos/manifest.json'));
+
+test('content keys use the upstream desktop artifact layout on Linux, macOS and Windows', async () => {
+  await mkdir(path.join(root, '.cache'), { recursive: true });
+  const fixture = await mkdtemp(path.join(root, '.cache/content-tool-layout-'));
+  try {
+    for (const [platform, arch, directory, executable] of [
+      ['linux', 'x64', 'linux-x64', 'haylen-content'],
+      ['darwin', 'arm64', 'macos-arm64', 'haylen-content'],
+      ['win32', 'x64', 'windows-x64', 'haylen-content.exe'],
+    ]) {
+      const output = path.join(fixture, 'build/artifacts/desktop', directory);
+      await mkdir(output, { recursive: true });
+      await writeFile(path.join(output, executable), 'Upstream tool output fixture');
+      assert.equal(
+        await readFile(desktopContentTool(fixture, platform, arch), 'utf8'),
+        'Upstream tool output fixture',
+      );
+    }
+    assert.throws(() => desktopContentTool(fixture, 'linux', 'ia32'), /Unsupported host/);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('each marketing page has consistent absolute search and social metadata', async () => {
+  const image = await readFile(path.join(dist, 'assets/og-cover.png'));
+  const titles = new Set();
+  const descriptions = new Set();
+  for (const [file, route] of [
+    ['index.html', '/'],
+    ['about/index.html', '/about/'],
+    ['demos/index.html', '/demos/'],
+  ]) {
+    const html = await text(file);
+    const canonical = `https://haylenengine.com${route}`;
+    assert.ok(html.includes(`<link rel="canonical" href="${canonical}"`));
+    assert.ok(html.includes(`<meta property="og:url" content="${canonical}"`));
+    assert.match(html, /property="og:image" content="https:\/\/haylenengine\.com\/assets\/og-cover.png"/);
+    assert.ok(html.includes(`property="og:image:width" content="${image.readUInt32BE(16)}"`));
+    assert.ok(html.includes(`property="og:image:height" content="${image.readUInt32BE(20)}"`));
+    assert.match(html, /name="twitter:image:alt" content="[^\"]+"/);
+    assert.match(html, /name="robots" content="index, follow, max-image-preview:large"/);
+    titles.add(html.match(/<title>(.*?)<\/title>/)[1]);
+    descriptions.add(html.match(/name="description" content="([^\"]+)"/)[1]);
+    const graph = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])[
+      '@graph'
+    ];
+    assert.equal(graph.find((entry) => entry['@id'] === `${canonical}#webpage`).url, canonical);
+    assert.ok(graph.some((entry) => entry['@type'] === 'WebSite'));
+    assert.ok(graph.some((entry) => entry['@type'] === 'SoftwareSourceCode'));
+  }
+  assert.equal(titles.size, 3);
+  assert.equal(descriptions.size, 3);
+  assert.match(await text('robots.txt'), /Sitemap: https:\/\/haylenengine\.com\/sitemap.xml/);
+  assert.doesNotMatch(await text('sitemap.xml'), /404|web-demos|index.html|lastmod/);
+  assert.match(await text('404.html'), /name="robots" content="noindex, follow"/);
+  assert.match(await text('_headers'), /X-Robots-Tag: noindex, follow/);
+});
+
+test('SEO rejects invalid origins and safely serializes structured content', async () => {
+  const raw = JSON.parse(await readFile(path.join(root, 'src/data/site.json'), 'utf8'));
+  const image = await readFile(path.join(dist, 'assets/og-cover.png'));
+  for (const url of [
+    'http://haylenengine.com',
+    'https://haylenengine.com/path',
+    'https://haylenengine.com/?q=x',
+    'https://user:pass@haylenengine.com',
+  ]) {
+    assert.throws(() => validateSite({ ...raw, url }, image), /HTTPS origin/);
+  }
+  const title = 'Engine & apps </script><script>alert(1)</script>';
+  const seo = pageSeo(validateSite(raw, image), 'home', title, 'An engine.');
+  assert.equal((seo.STRUCTURED_DATA.match(/<script/g) || []).length, 1);
+  const parsed = JSON.parse(seo.STRUCTURED_DATA.match(/>(.*?)<\/script>/s)[1]);
+  assert.equal(parsed['@graph'].find((entry) => entry['@type'] === 'WebPage').name, title);
+});
 
 for (const [page, filename] of [
   ['home', 'index.html'],

@@ -6,9 +6,10 @@ const samples = JSON.parse(await readFile(new URL('../../src/data/samples.json',
 for (const [name, url] of [
   ['Home', '/'],
   ['About', '/about/'],
-  ['Web demos', '/demos/'],
+  ['Demos', '/demos/'],
 ]) {
   test(`${name}: layout, images and console`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
@@ -51,7 +52,7 @@ test('navigation routes and mobile disclosure', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /Built with C\+\+/ })).toBeVisible();
   await page
     .getByRole('navigation', { name: 'Footer navigation' })
-    .getByRole('link', { name: 'Web demos', exact: true })
+    .getByRole('link', { name: 'Demos', exact: true })
     .click();
   await expect(page).toHaveURL(/\/demos\/$/);
   await page.goBack();
@@ -161,6 +162,15 @@ test('home explains features and platforms without sample previews or clipped he
       const boundary = visual.getBoundingClientRect();
       return {
         overflow: getComputedStyle(visual).overflowX,
+        separated: (() => {
+          const scene = visual.querySelector('.visual-scene').getBoundingClientRect();
+          const languages = visual.querySelector('.visual-languages').getBoundingClientRect();
+          const actions = document.querySelector('.hero-actions').getBoundingClientRect();
+          const overlapsActions =
+            Math.min(scene.right, actions.right) > Math.max(scene.left, actions.left) &&
+            Math.min(scene.bottom, actions.bottom) > Math.max(scene.top, actions.top);
+          return scene.bottom < languages.top && !overlapsActions;
+        })(),
         contained: [...visual.querySelectorAll('.visual-logo,.visual-orbits,.language-chip')].every(
           (part) => {
             const r = part.getBoundingClientRect();
@@ -174,6 +184,116 @@ test('home explains features and platforms without sample previews or clipped he
         ),
       };
     });
-    expect(result, `Hero at ${width}px`).toEqual({ overflow: 'visible', contained: true });
+    expect(result, `Hero at ${width}px`).toEqual({ overflow: 'visible', contained: true, separated: true });
   }
+});
+
+test('cyan trail stays behind its particle in the direction of travel', async ({ page }) => {
+  await page.goto('/');
+  const geometry = await page.locator('.orbit-trail-cyan').evaluate((trail) => {
+    const start = trail.getPointAtLength(0);
+    const end = trail.getPointAtLength(trail.getTotalLength());
+    const particle = document.querySelector('.orbit-particle-cyan');
+    const head = { x: particle.cx.baseVal.value, y: particle.cy.baseVal.value };
+    const angle = (point) => (Math.atan2(point.y - 210, point.x - 220) * 180) / Math.PI;
+    return {
+      gap: Math.hypot(end.x - head.x, end.y - head.y),
+      trailingAngle: (angle(head) - angle(start) + 360) % 360,
+      direction: getComputedStyle(trail.parentElement).animationDirection,
+    };
+  });
+  expect(geometry.gap).toBeLessThan(0.1);
+  expect(geometry.trailingAngle).toBeGreaterThan(20);
+  expect(geometry.trailingAngle).toBeLessThan(40);
+  expect(geometry.direction).toBe('normal');
+});
+
+test('hero motion runs, pauses, resumes and respects reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const visual = page.locator('.engine-visual');
+  await visual.scrollIntoViewIfNeeded();
+  const orbit = page.locator('.orbit-track-inner');
+  const transform = () => orbit.evaluate((element) => getComputedStyle(element).transform);
+  const haloTransforms = () =>
+    page
+      .locator('.visual-halo')
+      .evaluateAll((halos) => halos.map((halo) => getComputedStyle(halo).transform));
+  const initialHalos = await haloTransforms();
+  const initial = await transform();
+  await expect.poll(transform).not.toBe(initial);
+  await expect
+    .poll(async () => (await haloTransforms()).every((value, index) => value !== initialHalos[index]))
+    .toBe(true);
+  await page.getByRole('button', { name: 'Pause animation' }).click();
+  await expect(visual).toHaveAttribute('data-motion', 'paused');
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  const paused = await transform();
+  const pausedHalos = await haloTransforms();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(await transform()).toBe(paused);
+  expect(await haloTransforms()).toEqual(pausedHalos);
+  await page.getByRole('button', { name: 'Play animation' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(visual).toHaveAttribute('data-motion', 'running');
+  await expect.poll(transform).not.toBe(paused);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(visual).toHaveAttribute('data-motion', 'paused');
+  await expect(page.locator('.motion-toggle')).toBeHidden();
+  expect(await orbit.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  expect(
+    await page
+      .locator('.visual-halo')
+      .evaluateAll((halos) => halos.every((halo) => getComputedStyle(halo).animationName === 'none')),
+  ).toBe(true);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(page.getByRole('button', { name: 'Pause animation' })).toBeVisible();
+  await page.locator('#features').scrollIntoViewIfNeeded();
+  await expect(visual).toHaveAttribute('data-motion-visible', 'false');
+  expect(await orbit.evaluate((element) => getComputedStyle(element).animationPlayState)).toBe('paused');
+});
+
+test('hero stays visible and still without JavaScript', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto(baseURL);
+  await expect(page.locator('.visual-logo')).toBeVisible();
+  await expect(page.locator('.motion-toggle')).toBeHidden();
+  expect(
+    await page.locator('.visual-logo').evaluate((element) => getComputedStyle(element).animationPlayState),
+  ).toBe('paused');
+  await context.close();
+});
+
+test('SEO URLs are absolute and search variants share the gallery canonical', async ({ page, request }) => {
+  await page.goto('/demos/?category=games&q=tiny');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://haylenengine.com/demos/',
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    'https://haylenengine.com/demos/',
+  );
+  const response = await request.get('/sitemap.xml');
+  expect(response.status()).toBe(200);
+  const xml = await response.text();
+  const urls = await page.evaluate((source) => {
+    const document = new DOMParser().parseFromString(source, 'application/xml');
+    if (document.querySelector('parsererror')) throw new Error('Invalid sitemap XML');
+    return [...document.querySelectorAll('loc')].map((element) => element.textContent);
+  }, xml);
+  expect(urls).toEqual([
+    'https://haylenengine.com/',
+    'https://haylenengine.com/about/',
+    'https://haylenengine.com/demos/',
+  ]);
+  for (const url of urls) expect((await request.get(new URL(url).pathname)).status()).toBe(200);
+  const missing = await request.get('/not-a-page');
+  expect(missing.status()).toBe(404);
+  expect(await missing.text()).toContain('content="noindex, follow"');
 });

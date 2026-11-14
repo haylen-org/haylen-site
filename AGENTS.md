@@ -2,9 +2,9 @@
 
 ## Purpose and public content
 
-This repository is the static website for [Haylen](https://github.com/haylen-org/haylen), an open-source C++20 and Lua engine for games and apps. It contains Home, About and Web demos, plus a branded 404 page. Cloudflare Pages hosts both the website and the complete compiled WebAssembly sample folders.
+This repository is the static website for [Haylen](https://github.com/haylen-org/haylen), an open-source C++ and Lua engine for games and apps. It contains Home, About and Web demos, plus a branded 404 page. Cloudflare Pages hosts both the website and the complete compiled WebAssembly sample folders.
 
-Write new public copy in clear, common English. Explain what a feature does before naming its implementation. Say that Haylen is an engine for 2D games and apps. Describe graphics, physics, UI, audio, input, native plugins and supported platforms with specific examples. Do not add vague slogans, invented benchmarks, unsupported platform claims or claims of production certification. Haylen supports 2D today; future 3D support is not a current feature.
+Write new public copy in clear, common English. Refer to the language as C++ without a version number in public copy, metadata and artwork. Keep actual toolchain requirements in technical deployment documentation. Explain what a feature does before naming its implementation. Say that Haylen is an engine for 2D games and apps. Describe graphics, physics, UI, audio, input, native plugins and supported platforms with specific examples. Do not add vague slogans, invented benchmarks, unsupported platform claims or claims of production certification. Haylen supports 2D today; future 3D support is not a current feature.
 
 Home presents engine features using original feature illustrations. Do not put sample screenshots, app artwork, sample cards or direct runnable sample links on Home. Keep those on Web demos. About explains the architecture, project structure, plugin system, platform graphics APIs and development workflow.
 
@@ -19,6 +19,8 @@ The README is a short project presentation, with the official mark and useful pr
 - Build output, dependencies, native artifacts, temporary sample keys and browser evidence stay outside Git.
 - Availability is rendered into HTML at build time. Do not fetch a manifest after load to swap demo state or links.
 - Keep initial content visible. Avoid reveal animations, theme flashes, remote font loading or effects that hide the page while JavaScript starts.
+- The hero uses CSS/SVG animation without canvas, WebGL or an animation dependency. Keep the official logo intact. Motion starts only when JavaScript enables it, pauses outside the viewport and in hidden tabs, offers a keyboard-accessible pause button and stops for `prefers-reduced-motion`. Never animate layout dimensions or hide content during startup.
+- Keep the visual scene, C++/Lua blocks and motion controls in separate grid rows. Reserve the control row before JavaScript starts. Orbital trails must end at their particles and fade behind the direction of travel. Keep all transformed artwork inside its scene at every breakpoint; do not cover buttons or fix overlaps by clipping.
 
 ## File map and ownership
 
@@ -29,6 +31,7 @@ The README is a short project presentation, with the official mark and useful pr
 | `src/pages/about.html`               | Architecture, native plugins, platform/API table, workflow and license.                                                        |
 | `src/pages/demos.html`               | Search/filter UI and the build-rendered sample catalogue.                                                                      |
 | `src/data/samples.json`              | The single authoritative catalogue for sample metadata.                                                                        |
+| `src/data/site.json`                 | Public site identity, confirmed canonical origin and social image metadata.                                                    |
 | `src/tailwind.css`                   | Tailwind imports, explicit source detection and design tokens.                                                                 |
 | `src/design.css`                     | Component styles, fixed dark theme, responsive layout, focus and reduced motion.                                               |
 | `src/public/favicon.svg`             | Unchanged official Haylen symbol, also reused as the hero mark.                                                                |
@@ -40,6 +43,7 @@ The README is a short project presentation, with the official mark and useful pr
 | `src/public/licenses/`               | Source asset license notices copied into the public output.                                                                    |
 | `scripts/build.mjs`                  | Catalogue validation, static HTML rendering, native folder injection, icon/license rendering, CSS build and deployment limits. |
 | `scripts/icons.mjs`                  | Build-time Lucide and Font Awesome SVG rendering. No icon-library browser runtime.                                             |
+| `scripts/seo.mjs`                    | HTTPS-origin validation, canonical URLs, structured data and sitemap generation.                                               |
 | `scripts/build-web-demos.mjs`        | Upstream sample discovery and orchestration of the real Haylen native compiler.                                                |
 | `scripts/demo-artifacts.mjs`         | File traversal, full WASM validation and static-host preload integration.                                                      |
 | `tests/site.test.mjs`                | Node integrity, catalogue and packaging contracts, including failure cases.                                                    |
@@ -50,7 +54,7 @@ The README is a short project presentation, with the official mark and useful pr
 | `.github/workflows/deploy-pages.yml` | Verification plus one complete Cloudflare Pages Direct Upload publisher.                                                       |
 | `_headers`                           | Static response headers, including native demo cross-origin isolation.                                                         |
 | `_redirects`                         | Canonical About and Web demos paths.                                                                                           |
-| `robots.txt`                         | Public crawler policy.                                                                                                         |
+| `robots.txt`                         | Crawler policy template; the build injects the canonical origin into its sitemap URL.                                          |
 | `docs/deployment.md`                 | Local development, native builds, manual upload and GitHub/Cloudflare configuration.                                           |
 | `docs/artwork.md`                    | Identity, illustration, screenshot and icon-library provenance.                                                                |
 | `.cache/`                            | Ignored native output, private sample keys, test fixtures and browser evidence.                                                |
@@ -64,6 +68,12 @@ The build reads page fragments and inserts them into the shared layout. Template
 UI icons come from `lucide-static`; platform and GitHub brand icons come from `@fortawesome/free-brands-svg-icons`. `scripts/icons.mjs` reads selected SVGs and returns `ICON_*` tokens. All icons have `aria-hidden="true"` and `focusable="false"`; their visible link text or accessible label supplies the meaning. Add icons to this allowlist rather than loading an entire sprite, font, JavaScript package or remote icon service in the browser. Preserve both packages' license notices in the deployed output.
 
 Official Haylen SVGs must remain byte for byte intact. Do not regenerate them, convert them through Python or keep extra copies at repository root. Feature illustrations are editable SVG sources under `src/public/assets/features/`; they illustrate capabilities and must not be described as engine screenshots. Screenshot assets must come from real compiled Haylen output.
+
+## Search and sharing
+
+The production origin is `https://haylenengine.com`, defined once in `src/data/site.json`. Update that configuration for an intentional domain migration; do not derive canonical URLs from preview hosts or browser requests. Use unique page titles/descriptions and absolute canonical, Open Graph and Twitter image URLs. Gallery query parameters canonicalize to `/demos/`. Read image dimensions from the actual PNG. Serialize JSON-LD safely and describe real visible content without invented ratings, reviews or FAQ entries.
+
+Generate `dist/sitemap.xml` with the three canonical marketing pages. Do not invent modification dates or add 404s, query combinations, native entry points or binary assets. The branded 404 has `noindex` and returns HTTP 404. Native demo response headers have `X-Robots-Tag: noindex, follow`; keep them crawlable so crawlers can read that directive. The gallery remains indexable. Submit the sitemap to the domain's verified Search Console property separately; generated files do not prove indexing or ranking.
 
 ## Sample catalogue and generated output
 
@@ -88,6 +98,8 @@ Never mark a sample available based only on source code, an image, a manifest fl
 
 Use the official Haylen compiler. Release is the default. Its protected-content web shard target is set to 8 MiB in the imported upstream build module, leaving room beneath Pages' 25 MiB file limit. Do not modify the engine source or manually split an opaque ZIP, WASM or protected-content file. Development ZIPs can exceed the hosting limit.
 
+Desktop tools use the upstream host identifiers under `build/artifacts/desktop/<host>-<arch>/`: `macos`, `linux` or `windows`, followed by `arm64` or `x64`. Preserve `x64` when resolving `haylen-content`; `x86_64` belongs to other toolchain contexts and is not the desktop artifact directory name. Windows tools have the `.exe` suffix. Check that the tool was generated before creating sample keys, and preserve process errors in diagnostics.
+
 The builder adjusts Lua `config.json` files to preload every existing protected-content shard before startup. For C++ output, it reads the Emscripten file-package metadata and adds only missing shards to the generated page bootstrap through exported `Module.FS`; preserve the generated JS, WASM and data binary. Guard this upstream contract and fail explicitly if its format changes. Avoid duplicate writes of files already embedded in the C++ data package. Transparent sample pages receive a dark browser background.
 
 Temporary keys for public demo releases belong in `.cache/sample-keys/` and never enter `dist/`, ZIPs or Git. Use `HAYLEN_KEYS_DIR` when persistent engine release identities are intentionally supplied. Do not print keys or authentication tokens.
@@ -96,18 +108,18 @@ Temporary keys for public demo releases belong in `.cache/sample-keys/` and neve
 
 ## Environment variables
 
-| Variable                     | Owner and meaning                                                                |
-| ---------------------------- | -------------------------------------------------------------------------------- |
-| `HAYLEN_WEB_DEMOS_DIR`       | Site build input; defaults to `.cache/web-demos`.                                |
-| `HAYLEN_DIST_DIR`            | Isolated test output; only `dist/` or a directory inside `.cache/` is permitted. |
-| `HAYLEN_REQUIRE_ALL_DEMOS=1` | Require native output for every sample.                                          |
-| `CLOUDFLARE_MAX_FILES`       | File-count limit for the actual Pages plan; defaults to 20000.                   |
-| `HAYLEN_PYTHON`              | Optional executable for the upstream compiler; defaults to `python3`.            |
-| `HAYLEN_KEYS_DIR`            | Existing upstream content-key directory, when intentionally supplied.            |
-| `CPM_SOURCE_CACHE`           | Upstream native dependency cache.                                                |
-| `CLOUDFLARE_API_TOKEN`       | GitHub secret used only by Wrangler publication.                                 |
-| `CLOUDFLARE_ACCOUNT_ID`      | GitHub secret containing the target account ID.                                  |
-| `CLOUDFLARE_PAGES_PROJECT`   | GitHub variable with the Direct Upload project name.                             |
+| Variable                     | Owner and meaning                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `HAYLEN_WEB_DEMOS_DIR`       | Site build input; defaults to `.cache/web-demos`.                                         |
+| `HAYLEN_DIST_DIR`            | Isolated test output; only `dist/` or a directory inside `.cache/` is permitted.          |
+| `HAYLEN_REQUIRE_ALL_DEMOS=1` | Require native output for every sample.                                                   |
+| `CLOUDFLARE_MAX_FILES`       | File-count limit for the actual Pages plan; defaults to 20000.                            |
+| `HAYLEN_PYTHON`              | Optional executable for the upstream compiler; defaults to `python3`.                     |
+| `HAYLEN_KEYS_DIR`            | Existing upstream content-key directory, when intentionally supplied.                     |
+| `CPM_SOURCE_CACHE`           | Upstream native dependency cache.                                                         |
+| `CLOUDFLARE_API_TOKEN`       | GitHub secret used only by Wrangler publication.                                          |
+| `CLOUDFLARE_ACCOUNT_ID`      | GitHub secret containing the target account ID.                                           |
+| `CLOUDFLARE_PAGES_PROJECT`   | GitHub variable or secret with the Direct Upload project name; variable takes precedence. |
 
 ## Commands and test boundaries
 
@@ -118,7 +130,7 @@ npm install
 npm run format:check
 npm run build
 npm test
-npx playwright install chromium webkit
+npx playwright install chromium firefox webkit
 npm run test:browser
 npm run preview
 ```
@@ -136,7 +148,7 @@ HAYLEN_REQUIRE_ALL_DEMOS=1 npm run test:demos
 
 The compiler needs its own Python, CMake, Ninja, C++ and Emscripten tools. `--only games/tiny-island` supports focused local native builds; do not use it for a complete production upload. `--config Debug` is for native investigation and still must satisfy output limits.
 
-Website browser tests cover Chromium desktop/tablet/mobile and WebKit mobile, widths from 320 to 1920 px, image loading, navigation, search/category combinations, empty states, no-JavaScript links, keyboard focus, reduced motion, table scrolling and 404s. Test hero children against their actual container bounds; never hide overflow or crop glows/badges to conceal a layout defect.
+Website browser tests cover Chromium desktop/tablet/mobile, Firefox desktop and WebKit desktop/mobile, widths from 320 to 1920 px, image loading, navigation, search/category combinations, empty states, no-JavaScript links, keyboard focus, motion controls, reduced motion, table scrolling, SEO and 404s. Test hero children against their actual container bounds; never hide overflow or crop glows/badges to conceal a layout defect. Layout screenshots use reduced motion; the separate motion test verifies changing frames, pause/resume and preference changes. On macOS, the Firefox launch configuration isolates `MOZ_APP_DATA` and `MOZ_LOCAL_APP_DATA` inside `.cache/firefox/` so automated tests do not access protected personal browser data. Browser emulation does not prove physical-device behavior. Tailwind CSS 4 targets modern browsers; consult its documented compatibility floor before claiming support for older versions.
 
 Native browser tests must open the actual gallery link in a new tab, retain the gallery, confirm `window.opener === null`, await real rendering statistics, reject retry/error screens, check network/console failures and send bounded input. A successful compile or visible canvas is not proof of successful startup. Startup tests are not exhaustive gameplay, audio or physical-device tests. Report what actually ran, including skips and infrastructure failures.
 

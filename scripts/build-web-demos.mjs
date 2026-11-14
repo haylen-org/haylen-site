@@ -8,6 +8,18 @@ import { samplePathPattern, verifyDemo } from './demo-artifacts.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
+export function desktopContentTool(engine, platform = process.platform, arch = process.arch) {
+  const host = { darwin: 'macos', linux: 'linux', win32: 'windows' }[platform];
+  if (!host || !['arm64', 'x64'].includes(arch))
+    throw new Error(`Unsupported host for native sample content keys: ${platform}/${arch}`);
+  return path.join(
+    engine,
+    'build/artifacts/desktop',
+    `${host}-${arch}`,
+    platform === 'win32' ? 'haylen-content.exe' : 'haylen-content',
+  );
+}
+
 function parseArguments(args) {
   const options = { engineDir: null, jobs: 3, config: 'Release', only: [] };
   const names = { '--engine-dir': 'engineDir', '--jobs': 'jobs', '--config': 'config', '--only': 'only' };
@@ -111,16 +123,9 @@ async function main() {
   };
   let buildEnv = process.env;
   if (options.config === 'Release' && !process.env.HAYLEN_KEYS_DIR) {
+    const tool = desktopContentTool(engine);
     runEngine(['engine', '--platform', 'desktop', '--config', 'Release', '--jobs', String(options.jobs)]);
-    const platform = { darwin: 'macos', linux: 'linux', win32: 'windows' }[process.platform];
-    const arch = { arm64: 'arm64', x64: 'x86_64' }[process.arch];
-    if (!platform || !arch) throw new Error('Unsupported host for native sample content keys');
-    const tool = path.join(
-      engine,
-      'build/artifacts/desktop',
-      `${platform}-${arch}`,
-      process.platform === 'win32' ? 'haylen-content.exe' : 'haylen-content',
-    );
+    if (!existsSync(tool)) throw new Error(`Haylen content tool was not generated: ${tool}`);
     const keys = path.join(root, '.cache/sample-keys');
     for (const sample of chosen) {
       const app = JSON.parse(await readFile(path.join(engine, 'samples', sample.path, 'app.json'), 'utf8'));
@@ -133,7 +138,9 @@ async function main() {
         stdio: 'inherit',
       });
       if (result.error || result.status !== 0)
-        throw new Error(`Could not create disposable public sample keys: ${sample.path}`);
+        throw new Error(
+          `Could not create disposable public sample keys: ${sample.path} (${result.error?.message ?? `exit code ${result.status}`})`,
+        );
     }
     buildEnv = { ...process.env, HAYLEN_KEYS_DIR: keys };
   }

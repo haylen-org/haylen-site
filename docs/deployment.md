@@ -20,7 +20,7 @@ npm ci
 npm run demos:build -- --engine-dir ../haylen --jobs 3
 HAYLEN_REQUIRE_ALL_DEMOS=1 npm run build
 npm test
-npx playwright install chromium webkit
+npx playwright install chromium firefox webkit
 npm run test:browser
 HAYLEN_REQUIRE_ALL_DEMOS=1 npm run test:demos
 ```
@@ -48,6 +48,7 @@ dist/
   _headers
   _redirects
   robots.txt
+  sitemap.xml
   web-demos/
     manifest.json
     games/tiny-island/index.html
@@ -72,18 +73,28 @@ Create a Cloudflare Pages **Direct Upload** project. Keep this workflow as the s
 
 Configure these values in the website's GitHub repository:
 
-| Kind              | Name                       | Value                                                              |
-| ----------------- | -------------------------- | ------------------------------------------------------------------ |
-| Secret            | `CLOUDFLARE_API_TOKEN`     | Token with Cloudflare Pages edit permission for the account.       |
-| Secret            | `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare account ID.                                             |
-| Variable          | `CLOUDFLARE_PAGES_PROJECT` | Exact name of the Direct Upload project.                           |
-| Optional variable | `CLOUDFLARE_MAX_FILES`     | File-count allowance for the actual Pages plan; defaults to 20000. |
+| Kind               | Name                       | Value                                                               |
+| ------------------ | -------------------------- | ------------------------------------------------------------------- |
+| Secret             | `CLOUDFLARE_API_TOKEN`     | Token with Cloudflare Pages edit permission for the account.        |
+| Secret             | `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare account ID.                                              |
+| Variable or secret | `CLOUDFLARE_PAGES_PROJECT` | Exact name of the Direct Upload project; variable takes precedence. |
+| Optional variable  | `CLOUDFLARE_MAX_FILES`     | File-count allowance for the actual Pages plan; defaults to 20000.  |
 
 Push to `main` or run **Publish Haylen site and WASM demos** manually. Pull requests run the website checks without production secrets or uploads. Production performs website checks, validates configuration, checks out Haylen `main`, compiles every sample, injects every folder into `dist/`, opens each demo in a separate Chromium tab and uploads **all of `dist/` in one deployment**. Publication is enabled only after `CLOUDFLARE_PAGES_PROJECT` is set. Until then, website verification still runs and reports a setup notice. When publication is enabled, missing secrets, a failed sample, runtime smoke failure or exceeded hosting limit stops the upload.
 
 The manifest records the checked-out engine commit in CI. `main` intentionally tracks the latest engine; its integration can require maintenance when upstream contracts change. Native compilation is distinct from browser startup checks and from a complete gameplay test. Browser screenshots and traces are retained as workflow artifacts.
 
 The `/web-demos/*` headers enable cross-origin isolation required by the native browser runtime. All native resources are served from the same static origin. Browser capabilities and hardware still govern WebGPU, WebGL2 and audio availability.
+
+## Search and social previews
+
+The confirmed production origin is **https://haylenengine.com**, configured in `src/data/site.json`. The build generates absolute canonical and social URLs, unique page metadata, safely serialized Schema.org JSON-LD, `sitemap.xml` and the sitemap declaration in `robots.txt`. The social cover is a local PNG with measured dimensions. Gallery search/filter URLs share the canonical `/demos/` URL. The sitemap lists only Home, About and Demos; the 404 and native sample responses are excluded from indexing.
+
+Attach the domain to this Pages project and use HTTPS. After deployment, verify the domain in [Google Search Console](https://search.google.com/search-console) and submit `https://haylenengine.com/sitemap.xml`. Neither the build nor this repository submits it automatically. Inspect the three production URLs with URL Inspection. Sitemaps and structured data help discovery and interpretation, but do not guarantee indexing, rich results or rankings. For domain changes, update the single site configuration and configure a permanent redirect at Cloudflare from the old domain.
+
+References: [Google canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls), [Google sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Open Graph](https://ogp.me/), [Schema.org SoftwareSourceCode](https://schema.org/SoftwareSourceCode).
+
+The browser suite runs Chromium, Firefox and WebKit. On macOS the Firefox configuration uses isolated app-data directories under `.cache/firefox/`, avoiding access to the user's personal Firefox data ([Mozilla issue](https://bugzilla.mozilla.org/show_bug.cgi?id=2060476)). The hero uses standard CSS/SVG animation, with a still no-JavaScript fallback, pause control and reduced-motion support. Tailwind CSS 4 requires modern browser versions ([compatibility](https://tailwindcss.com/docs/compatibility)); do not claim support for every historical browser version.
 
 References: [Cloudflare limits](https://developers.cloudflare.com/pages/platform/limits/), [Direct Upload with CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/), [Haylen distribution](https://github.com/haylen-org/haylen/blob/main/docs/tools/distribution.md), [Haylen protected content](https://github.com/haylen-org/haylen/blob/main/docs/content/content.md).
 
