@@ -1,0 +1,98 @@
+[
+  {
+    "path": "games/tiny-island",
+    "name": "Tiny Island",
+    "category": "Games",
+    "description": "A 2D survival game with an island, characters, combat and a day-and-night cycle.",
+    "cover": "island",
+    "image": "games-tiny-island-preview.png"
+  },
+  {
+    "path": "games/taskbar-quest",
+    "name": "Haylen Taskbar Quest",
+    "category": "Games",
+    "description": "A small game made for a desktop taskbar. The web version runs inside a browser tab.",
+    "cover": "quest",
+    "image": "games-taskbar-quest-preview.png"
+  },
+  {
+    "path": "apps/music-streaming",
+    "name": "Music Streaming",
+    "category": "Apps",
+    "description": "A music app with playlists, browsing screens and playback controls.",
+    "cover": "music",
+    "image": "apps-music-streaming-preview.png"
+  },
+  {
+    "path": "apps/online-store",
+    "name": "Online Store",
+    "category": "Apps",
+    "description": "A shopping app with product pages, categories and a cart interface.",
+    "cover": "store",
+    "image": "apps-online-store-preview.png"
+  },
+  {
+    "path": "apps/photo-social",
+    "name": "Photo Social",
+    "category": "Apps",
+    "description": "A social app with a photo feed, profiles and messages.",
+    "cover": "photo",
+    "image": "apps-photo-social-preview.png"
+  },
+  {
+    "path": "apps/ride-hailing",
+    "name": "Ride Hailing",
+    "category": "Apps",
+    "description": "A ride-booking app with a map, destinations and trip details.",
+    "cover": "ride",
+    "image": "apps-ride-hailing-preview.png"
+  },
+  {
+    "path": "stress/many-sprites",
+    "name": "Many Sprites",
+    "category": "Stress",
+    "description": "A rendering test with large numbers of sprites. Change the count to see how it runs.",
+    "cover": "sprites",
+    "image": "stress-many-sprites-preview.png"
+  },
+  {
+    "path": "stress/many-bodies",
+    "name": "Many Bodies",
+    "category": "Stress",
+    "description": "A physics test with moving bodies, collisions and controls for adding more objects.",
+    "cover": "bodies",
+    "image": "stress-many-bodies-preview.png"
+  },
+  {
+    "path": "stress/streamed-map",
+    "name": "Streamed Map",
+    "category": "Stress",
+    "description": "A scrolling tile map that loads more of the world as the camera moves.",
+    "cover": "map",
+    "image": "stress-streamed-map-preview.png"
+  },
+  {
+    "path": "stress/busy-interface",
+    "name": "Busy Interface",
+    "category": "Stress",
+    "description": "A live dashboard with charts, lists and many changing UI elements.",
+    "cover": "ui",
+    "image": "stress-busy-interface-preview.png"
+  },
+  {
+    "path": "tests",
+    "name": "Haylen Tests",
+    "category": "Tests",
+    "description": "A collection of engine tests for graphics, physics, UI, audio and other features.",
+    "cover": "tests",
+    "image": "tests-preview.png"
+  },
+  {
+    "path": "cpp/embedding",
+    "name": "C++ Embedding",
+    "category": "C++",
+    "description": "A C++ project that uses Haylen to draw its logo, text and an animated orbit.",
+    "cover": "cpp",
+    "image": "cpp-embedding-preview.png"
+  }
+]

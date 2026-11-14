@@ -1,0 +1,221 @@
+<section class="container page-intro about-intro">
+  <div>
+    <p class="eyebrow">ABOUT HAYLEN</p>
+    <h1>Built with C++.<br /><span class="gradient-text">Scripted with Lua.</span></h1>
+    <p class="lead">
+      Haylen is an open-source engine for 2D games and apps. It brings graphics, physics, UI, audio and native
+      plugins into one engine.
+    </p>
+  </div>
+  <div class="about-mark"><img src="../favicon.svg" alt="Haylen symbol" width="180" height="215" /></div>
+</section>
+<section class="container about-principles">
+  <div>
+    <p class="eyebrow">HOW IT WORKS</p>
+    <h2>A native engine.<br />A shared app project.</h2>
+  </div>
+  <div>
+    <p>
+      The engine is written in C++20. Its API is also available in Lua through Varn, so you can write your app
+      in Lua, work directly in C++, or add native plugins.
+    </p>
+    <p>
+      A Lua project contains an <code>app.json</code> file, a <code>source/</code> folder for code and a
+      <code>content/</code> folder for assets. The same project can run on each supported platform.
+    </p>
+    <p>Haylen supports 2D today. The engine is organized so 3D can be added later.</p>
+    <a class="text-link" href="https://github.com/haylen-org/haylen/tree/main/docs"
+      >Read the documentation {{ICON_ARROW_RIGHT}}</a
+    >
+  </div>
+</section>
+<section class="container section">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">WHAT YOU CAN BUILD</p>
+      <h2>Games, apps and native tools.</h2>
+    </div>
+  </div>
+  <div class="use-case-grid">
+    <article>
+      {{ICON_GAMEPAD}}
+      <h3>2D games</h3>
+      <p>
+        Use sprites, animation, physics, tile maps, lighting and game AI. Add keyboard, touch or controller
+        input.
+      </p>
+    </article>
+    <article>
+      {{ICON_INTERFACE}}
+      <h3>Apps & interfaces</h3>
+      <p>
+        Build screens with UI components, text, forms and themes. Add audio, HTTP requests and WebSocket
+        connections.
+      </p>
+    </article>
+    <article>
+      {{ICON_PLUGINS}}
+      <h3>Native integrations</h3>
+      <p>
+        Use a native plugin when your project needs a platform API, an existing library or code written in
+        another language.
+      </p>
+    </article>
+  </div>
+</section>
+<section class="section-tint">
+  <div class="container section plugins-section">
+    <div>
+      <p class="eyebrow">THE PLUGIN SYSTEM</p>
+      <h2>Use native code<br />from your Lua app.</h2>
+      <p class="section-copy">
+        A plugin packages its code, assets and platform implementations together. Your Lua app calls its API
+        without having to manage each platform separately.
+      </p>
+      <ul class="plain-list">
+        <li>{{ICON_CHECK}} Swift and Objective-C on Apple platforms</li>
+        <li>{{ICON_CHECK}} Kotlin and Java on Android</li>
+        <li>{{ICON_CHECK}} JavaScript in the browser</li>
+        <li>{{ICON_CHECK}} C++ for shared native code</li>
+      </ul>
+      <a class="text-link" href="https://github.com/haylen-org/haylen/blob/main/docs/platform/plugins.md"
+        >Learn how to create a plugin {{ICON_ARROW_RIGHT}}</a
+      >
+    </div>
+    <img
+      class="plugin-diagram"
+      src="../assets/features/plugin-bridge.svg"
+      alt="A shared Lua plugin API connected to native platform implementations"
+      width="560"
+      height="400"
+      loading="lazy"
+    />
+  </div>
+</section>
+<section class="container section" id="platforms">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">PLATFORMS & GRAPHICS</p>
+      <h2>Native graphics on each platform.</h2>
+    </div>
+    <p class="section-intro">
+      Haylen tries the graphics APIs included in a platform build. Availability depends on the device and its
+      drivers.
+    </p>
+  </div>
+  <div class="table-scroll" role="region" aria-label="Platform compatibility table" tabindex="0">
+    <table class="compatibility-table">
+      <caption class="sr-only">
+        Supported platforms and graphics APIs
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Platform</th>
+          <th scope="col">Graphics APIs</th>
+          <th scope="col">Devices</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row"><span>{{ICON_APPLE}} macOS</span></th>
+          <td>Metal</td>
+          <td>Desktop</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_WINDOWS}} Windows</span></th>
+          <td>Direct3D 12 · Direct3D 11 · Vulkan · OpenGL</td>
+          <td>Desktop</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_LINUX}} Linux</span></th>
+          <td>Vulkan · OpenGL</td>
+          <td>Desktop</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_APPLE}} iOS & iPadOS</span></th>
+          <td>Metal</td>
+          <td>Phones & tablets</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_ANDROID}} Android</span></th>
+          <td>Vulkan · OpenGL ES</td>
+          <td>Phones, tablets & TVs</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_WEB}} Web</span></th>
+          <td>WebGPU · WebGL2</td>
+          <td>Browsers with WebAssembly support</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_TV}} tvOS</span></th>
+          <td>Metal</td>
+          <td>Apple TV</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_HEADSET}} visionOS</span></th>
+          <td>Metal</td>
+          <td>Apple Vision Pro</td>
+        </tr>
+        <tr>
+          <th scope="row"><span>{{ICON_MONITOR}} Mac Catalyst</span></th>
+          <td>Metal</td>
+          <td>Mac</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="table-note">
+    Each platform has its own build tools and minimum requirements.
+    <a href="https://github.com/haylen-org/haylen/blob/main/docs/tools/distribution.md"
+      >Read the platform guide {{ICON_EXTERNAL_LINK}}</a
+    >
+  </p>
+</section>
+<section class="section-tint">
+  <div class="container section workflow-section">
+    <div>
+      <p class="eyebrow">DEVELOPMENT</p>
+      <h2>Create it. Run it.<br />Make a change.</h2>
+      <p class="section-copy">
+        Use the Haylen command line to create and run a project. Hot reload updates your running app as you
+        edit its Lua code and assets.
+      </p>
+      <p class="section-copy">Build a web version when you want to test it in a browser.</p>
+      <a class="text-link" href="https://github.com/haylen-org/haylen#quick-start"
+        >Follow the setup guide {{ICON_ARROW_RIGHT}}</a
+      >
+    </div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span><i></i><i></i><i></i></span><span>Terminal</span>{{ICON_TERMINAL}}
+      </div>
+      <pre><code><span class="code-comment"># Create a project</span>
+haylen new ~/apps/my-app \
+  --name "My App" \
+  --identifier com.example.myapp
+
+<span class="code-comment"># Run the app</span>
+haylen run ~/apps/my-app
+
+<span class="code-comment"># Build and run for the web</span>
+haylen run ~/apps/my-app --platform web</code></pre>
+      <div class="terminal-footer">{{ICON_REFRESH}} Edit your code and see the changes.</div>
+    </div>
+  </div>
+</section>
+<section class="container section">
+  <div class="license-panel">
+    <div class="license-symbol">MIT</div>
+    <div>
+      <p class="eyebrow">OPEN SOURCE</p>
+      <h2>Free for games and apps.</h2>
+      <p>
+        Use Haylen for personal or commercial projects. You can read, change and share the code under the MIT
+        license.
+      </p>
+    </div>
+    <a class="button button-secondary" href="https://github.com/haylen-org/haylen/blob/main/LICENSE"
+      >Read the license {{ICON_EXTERNAL_LINK}}</a
+    >
+  </div>
+</section>

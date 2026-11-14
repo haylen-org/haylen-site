@@ -1,0 +1,55 @@
+<section class="container page-intro demos-intro">
+  <p class="eyebrow">WEB DEMOS</p>
+  <div class="demos-intro-row">
+    <div>
+      <h1>Try Haylen<br /><span class="gradient-text">in your browser.</span></h1>
+      <p class="lead">
+        Open a game, app or engine test. Each demo runs as WebAssembly in a new tab, and each project includes
+        its source code.
+      </p>
+    </div>
+    <div class="catalogue-stat">
+      <strong>{{SAMPLE_COUNT}}</strong><span>SAMPLE<br />PROJECTS</span>
+    </div>
+  </div>
+</section>
+<section class="container catalogue-section" aria-label="Sample projects">
+  <div class="catalogue-toolbar">
+    <div class="filter-chips" role="group" aria-label="Filter projects by category">{{CATEGORY_FILTERS}}</div>
+    <label class="search-field" for="demo-search"
+      >{{ICON_SEARCH}}<input
+        type="search"
+        id="demo-search"
+        placeholder="Search demos"
+        autocomplete="off"
+      /><span class="sr-only">Search demos</span></label
+    >
+  </div>
+  <div class="catalogue-summary">
+    <p id="result-count" aria-live="polite" aria-atomic="true">{{SAMPLE_COUNT}} projects</p>
+    <span><span class="status-dot"></span> {{PUBLISHED_COUNT}} ready to run</span>
+  </div>
+  <div id="demo-grid" class="demo-grid">{{DEMO_CARDS}}</div>
+  <div id="empty-results" class="empty-results" hidden>
+    {{ICON_SEARCH}}
+    <h2>No demos found.</h2>
+    <p>Try another search or choose a different category.</p>
+    <button class="button button-secondary" id="clear-filters">Reset filters {{ICON_ARROW_RIGHT}}</button>
+  </div>
+  <p class="table-note">
+    Images show the actual web builds. Demos open in a new tab. Browser and device support may vary.
+  </p>
+  <noscript
+    ><p class="noscript-note">All demos are shown. Search and category filters need JavaScript.</p></noscript
+  >
+</section>
+<section class="container demo-bottom">
+  <div>
+    <p class="eyebrow">SOURCE CODE</p>
+    <h2>See how each project works.</h2>
+    <p>Read the sample code or use the documentation to start your own project.</p>
+  </div>
+  <a class="button button-primary" href="https://github.com/haylen-org/haylen/tree/main/docs"
+    >Read the documentation {{ICON_BOOK}}</a
+  >
+</section>

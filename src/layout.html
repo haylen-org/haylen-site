@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090b10" />
+    <title>{{TITLE}}</title>
+    <meta name="description" content="{{DESCRIPTION}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{TITLE}}" />
+    <meta property="og:description" content="{{DESCRIPTION}}" />
+    <meta property="og:image" content="{{PREFIX}}assets/og-cover.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="{{PREFIX}}favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="{{PREFIX}}assets/site.css" />
+    <script src="{{PREFIX}}assets/main.js" defer></script>
+  </head>
+  <body data-page="{{PAGE}}">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="{{PREFIX}}index.html" aria-label="Haylen home"
+          ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
+        /></a>
+        <nav class="desktop-nav" aria-label="Main navigation">{{DESKTOP_NAV}}</nav>
+        <a class="header-github" href="https://github.com/haylen-org/haylen"
+          >{{ICON_GITHUB}}<span>GitHub</span>{{ICON_EXTERNAL_LINK}}</a
+        ><button
+          class="menu-toggle"
+          id="menu-toggle"
+          aria-expanded="false"
+          aria-controls="mobile-nav"
+          aria-label="Open navigation"
+        >
+          <span></span><span></span>
+        </button>
+      </div>
+      <nav id="mobile-nav" class="mobile-nav container" aria-label="Mobile navigation" hidden>
+        {{MOBILE_NAV}}
+      </nav>
+    </header>
+    <main id="main">{{BODY}}</main>
+    <footer class="site-footer">
+      <div class="container footer-top">
+        <a class="brand" href="{{PREFIX}}index.html" aria-label="Haylen home"
+          ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
+        /></a>
+        <p>An open-source engine for games and apps.</p>
+        <a href="https://github.com/haylen-org/haylen">Source code {{ICON_EXTERNAL_LINK}}</a>
+      </div>
+      <div class="container footer-bottom">
+        <span>© {{YEAR}} Haylen contributors</span>
+        <nav aria-label="Footer navigation">
+          <a href="{{PREFIX}}about/">About</a><a href="{{PREFIX}}demos/">Web demos</a
+          ><a href="https://github.com/haylen-org/haylen/tree/main/docs">Documentation</a
+          ><a href="https://github.com/haylen-org/haylen/blob/main/LICENSE">MIT license</a>
+        </nav>
+        <span>Made with C++20 and Lua.</span>
+      </div>
+    </footer>
+  </body>
+</html>

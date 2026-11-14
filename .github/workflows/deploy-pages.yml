@@ -1,0 +1,114 @@
+name: Publish Haylen site and WASM demos
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: haylen-pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: Verify static website
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - name: Report publication setup
+        if: github.event_name != 'pull_request' && vars.CLOUDFLARE_PAGES_PROJECT == ''
+        run: echo '::notice::Website checks are enabled. Set CLOUDFLARE_PAGES_PROJECT, CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to enable complete site and WASM publication.'
+      - name: Retain browser review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-browser-review
+          path: .cache/browser-results
+          retention-days: 14
+
+  publish:
+    name: Compile every sample and publish complete static output
+    if: github.event_name != 'pull_request' && vars.CLOUDFLARE_PAGES_PROJECT != ''
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      CPM_SOURCE_CACHE: ${{ github.workspace }}/haylen-engine/.cache/cpm
+      HAYLEN_REQUIRE_ALL_DEMOS: '1'
+      CLOUDFLARE_MAX_FILES: ${{ vars.CLOUDFLARE_MAX_FILES || '20000' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deployment configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
+          test -n "$CLOUDFLARE_PAGES_PROJECT" || { echo 'Missing CLOUDFLARE_PAGES_PROJECT'; exit 1; }
+      - name: Checkout Haylen engine
+        uses: actions/checkout@v4
+        with:
+          repository: haylen-org/haylen
+          ref: main
+          path: haylen-engine
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Set up the upstream Haylen compiler runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+      - name: Install native build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libgl1-mesa-dev libegl-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libdbus-1-dev libibus-1.0-dev libudev-dev
+      - uses: actions/cache@v4
+        with:
+          path: |
+            haylen-engine/.tools
+            haylen-engine/.cache/cpm
+          key: haylen-tools-${{ runner.os }}-${{ hashFiles('haylen-engine/haylen.py', 'haylen-engine/engine/cmake/haylen-dependencies.cmake', 'haylen-engine/engine/cmake/haylen-shader-compiler.json') }}
+      - run: npm ci
+      - name: Discover and compile every sample with the official Haylen CLI
+        run: npm run demos:build -- --engine-dir ./haylen-engine --jobs 3
+      - name: Inject compiled sample folders and direct index.html links
+        run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Open every compiled demo in a real browser
+        run: npm run test:demos
+      - name: Keep the complete publishable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: haylen-static-site-with-wasm
+          path: dist
+          retention-days: 7
+      - name: Retain sample runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-runtime-review
+          path: .cache/demo-results
+          retention-days: 14
+      - name: Upload the entire static site to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: npx --no-install wrangler pages deploy dist --project-name="$CLOUDFLARE_PAGES_PROJECT" --branch=main

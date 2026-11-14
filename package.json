@@ -1,0 +1,30 @@
+{
+  "name": "haylen-site",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "description": "Static Haylen website and WebAssembly sample gallery",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "demos:build": "node scripts/build-web-demos.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "preview": "wrangler pages dev dist",
+    "deploy": "wrangler pages deploy dist",
+    "test:browser": "playwright test --config playwright.config.mjs",
+    "test:demos": "playwright test --config playwright.demos.config.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@fortawesome/free-brands-svg-icons": "7.3.1",
+    "@playwright/test": "1.65.1",
+    "@tailwindcss/cli": "4.3.5",
+    "lucide-static": "1.72.0",
+    "prettier": "3.8.4",
+    "tailwindcss": "4.3.5",
+    "wrangler": "4.162.0"
+  }
+}
