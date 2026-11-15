@@ -3,9 +3,55 @@
     {
       "name": "move",
       "type": "axis",
-      "negative": ["key:left", "key:a", "virtual:left"],
-      "positive": ["key:right", "key:d", "virtual:right"]
+      "negative": ["key:left", "key:a", "virtual:left", "button:dpadLeft", "axis:leftX-"],
+      "positive": ["key:right", "key:d", "virtual:right", "button:dpadRight", "axis:leftX+"]
     },
-    { "name": "jump", "type": "button", "bindings": ["key:space", "key:w", "key:up", "virtual:jump"] }
+    {
+      "name": "jump",
+      "type": "button",
+      "bindings": ["key:space", "key:w", "virtual:jump", "button:south"]
+    },
+    {
+      "name": "fire",
+      "type": "button",
+      "bindings": ["key:x", "key:j", "mouse:left", "virtual:fire", "button:west", "axis:rightTrigger+"]
+    },
+    {
+      "name": "dash",
+      "type": "button",
+      "bindings": ["key:leftShift", "key:k", "virtual:dash", "button:east"]
+    },
+    {
+      "name": "hero",
+      "type": "button",
+      "bindings": ["key:c", "virtual:hero", "button:north", "button:rightShoulder"]
+    },
+    {
+      "name": "retry",
+      "type": "button",
+      "bindings": ["key:r", "button:back"]
+    },
+    {
+      "name": "sound",
+      "type": "button",
+      "bindings": ["key:m", "button:leftShoulder"]
+    },
+    {
+      "name": "aimStick",
+      "type": "vector",
+      "bindings": ["stick:right"]
+    },
+    {
+      "name": "aimX",
+      "type": "axis",
+      "negative": ["key:left"],
+      "positive": ["key:right"]
+    },
+    {
+      "name": "aimY",
+      "type": "axis",
+      "negative": ["key:up"],
+      "positive": ["key:down"]
+    }
   ]
 }

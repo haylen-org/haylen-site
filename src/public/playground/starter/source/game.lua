@@ -1,101 +1,208 @@
+-- The scene connects the simulation, presentation and mission state.
 local assets = require('haylen.assets')
-local graphics = require('haylen.graphics2d')
 local input = require('haylen.input')
+local graphics = require('haylen.graphics2d')
 local Player = require('player')
+local World = require('world')
+local Enemy = require('enemy')
+local Combat = require('combat')
+local Effects = require('effects')
+local Sound = require('sound')
+local Renderer = require('renderer')
+local Controls = require('touch-controls')
+
 local Game = {}
 Game.__index = Game
 
 function Game.new()
-    local self = setmetatable({}, Game)
+    return setmetatable({}, Game)
+end
+
+function Game:load()
     self.level = assets.json('level.json')
-    self.hero = assets.vectorImage('hero.svg')
-    self.tile = assets.vectorImage('tile.svg')
-    self.coin = assets.vectorImage('coin.svg')
-    self.cloud = assets.vectorImage('cloud.svg')
-    self.enemy = assets.vectorImage('enemy.svg')
-    self.flag = assets.vectorImage('flag.svg')
+    self.renderer = Renderer.new()
+    self.sound = Sound.new()
     self:reset()
-    return self
 end
 
 function Game:reset()
-    self.player = Player.new(80, 300)
-    self.collected = {}
-    self.score = 0
+    -- Destroy the previous native world before replacing its actors on retry.
+    if self.world ~= nil then
+        self.world:destroy()
+    end
+
+    if self.effects ~= nil then
+        self.effects:clear()
+    end
+
+    self.world = World.new(self.level)
+    self.effects = Effects.new()
+    self.controls = Controls.new()
+    self.player = Player.new(self.world.physics, self.level.spawn)
+    self.combat = Combat.new(self)
+
+    self.camera = graphics.newCamera()
+    self.camera.position = {640, 360}
+    self.camera.positionSmoothing = true
+    self.camera.positionSmoothingSpeed = 5
+    self.camera.limits = {0, 0, self.level.width, 720}
+    self.camera.maxShakeOffset = 16
+    self.camera.maxShakeAngle = 0.012
+
+    self.enemies = {}
+    self.boss = nil
+
+    for _, point in ipairs(self.level.enemies) do
+        local enemy = Enemy.new(self.world.physics, point)
+        self.enemies[#self.enemies + 1] = enemy
+
+        if enemy.boss then
+            self.boss = enemy
+        end
+    end
+
+    assert(self.boss ~= nil, 'The level needs a guardian with kind = brute.')
+
+    self.relics = {}
+
+    for _, point in ipairs(self.level.relics) do
+        self.relics[#self.relics + 1] = {x = point.x, y = point.y, collected = false}
+    end
+
+    self.state = 'playing'
     self.time = 0
-    self.camera = 0
-    self.won = false
+    self.kills = 0
+    self.relicCount = 0
 end
 
-local function overlaps(a, b)
-    return a.x < b.x + b.width and a.x + a.width > b.x
-        and a.y < b.y + b.height and a.y + a.height > b.y
+function Game:enter()
+    print('Emberfall ready. A/D move. Space jumps. X/J or click attacks. Mouse or arrows aim.')
+    print('Shift dashes. 1/2/3 or C changes hero. R restarts. M toggles sound.')
+    print('Gamepad: left stick or D-pad moves. Right stick aims. Bottom button jumps.')
+    print('Right trigger or left face button attacks. Right face button dashes. Top button changes hero.')
 end
 
-function Game:update(dt)
-    dt = math.min(dt, 1 / 30)
-    if input.keyPressed('r') then self:reset() end
-    if self.won then return end
-    self.time = self.time + dt
-    self.player:update(dt, self.level.platforms)
-    self.camera = math.max(0, math.min(self.level.width - 960, self.player.x - 360))
-    if self.player.y > 620 then self:reset() end
-    for index, coin in ipairs(self.level.coins) do
-        if not self.collected[index] and overlaps(self.player, {x = coin.x, y = coin.y, width = 20, height = 20}) then
-            self.collected[index] = true
-            self.score = self.score + 1
-            print('Coin collected! ' .. self.score .. ' / ' .. #self.level.coins)
+function Game:damage(amount)
+    if self.state ~= 'playing' or self.player.invulnerable > 0 then
+        return
+    end
+
+    self.player.health = math.max(0, self.player.health - amount)
+    self.player.invulnerable = 1
+
+    self.effects:burst(self.player.x, self.player.y, 20)
+    self.camera:addTrauma(0.3)
+    self.sound:play('hit')
+
+    if self.player.health == 0 then
+        self.state = 'failed'
+        print('The quest continues. Press R to try again.')
+    end
+end
+
+function Game:update(deltaTime)
+    self.controls:update(deltaTime)
+    -- Frame updates read controls and animate artwork without stepping physics.
+    if input.pressed('sound') then
+        self.sound.muted = not self.sound.muted
+    end
+
+    local retryFromResult = self.state ~= 'playing' and input.pressed('jump')
+
+    if input.pressed('retry') or retryFromResult then
+        self:reset()
+    end
+
+    self.time = self.time + deltaTime
+
+    if self.state == 'playing' then
+        self.player:readInput(self.camera, self.controls)
+    end
+
+    self.player:update(deltaTime, self)
+
+    for _, enemy in ipairs(self.enemies) do
+        enemy:update(deltaTime)
+    end
+
+    local lookAhead = self.player.facing * 110
+    self.camera:follow(self.player.x + lookAhead, 360, deltaTime)
+    self.camera:update(deltaTime)
+    self.effects:update(deltaTime, self.camera)
+end
+
+function Game:collectRelics()
+    for _, relic in ipairs(self.relics) do
+        local differenceX = self.player.x - relic.x
+        local differenceY = self.player.y - relic.y
+        local distanceSquared = differenceX * differenceX + differenceY * differenceY
+
+        if not relic.collected and distanceSquared < 90 * 90 then
+            relic.collected = true
+            self.relicCount = self.relicCount + 1
+            self.player.health = math.min(5, self.player.health + 1)
+
+            self.effects:burst(relic.x, relic.y, 45)
+            self.sound:play('relic')
+            print('Relic found: ' .. self.relicCount .. ' / ' .. #self.relics)
         end
     end
-    for _, enemy in ipairs(self.level.enemies) do
-        local position = {x = enemy.x + math.sin(self.time * 1.4) * 45, y = enemy.y, width = 32, height = 24}
-        if overlaps(self.player, position) then
-            if self.player.vy > 100 and self.player.y + self.player.height < position.y + 14 then
-                self.player.vy = -420
-            else self:reset() end
-        end
+end
+
+function Game:checkPortal()
+    local allRelicsFound = self.relicCount == #self.relics
+    local guardianDefeated = not self.boss.alive
+    local nearPortal = math.abs(self.player.x - self.level.gate.x) < 80
+
+    if allRelicsFound and guardianDefeated and nearPortal then
+        self.state = 'won'
+        self.effects:burst(self.level.gate.x, self.level.gate.y, 100, true)
+        print('Quest complete. All relics found. The portal is open.')
     end
-    if self.player.x > self.level.width - 110 then
-        self.won = true
-        print('You reached the flag! Change the level, or press R to play again.')
+end
+
+function Game:fixedUpdate(deltaTime)
+    if self.state ~= 'playing' then
+        return
     end
+
+    -- Fixed steps keep movement, hit detection and rigid bodies on one timeline.
+    self.player:step(deltaTime, self)
+
+    for _, enemy in ipairs(self.enemies) do
+        enemy:step(deltaTime, self)
+    end
+
+    self.combat:step(deltaTime)
+    self.world:step(deltaTime)
+
+    -- Falling through a gap ends the run even during dash invulnerability.
+    if self.player.y > 1000 then
+        self.player.invulnerable = 0
+        self:damage(5)
+    end
+
+    if self.state ~= 'playing' then
+        return
+    end
+
+    self:collectRelics()
+    self:checkPortal()
 end
 
 function Game:render()
-    graphics.beginScreen()
-    graphics.drawRect({x = 0, y = 0, width = 960, height = 540}, '#FF102C46')
-    graphics.drawCircle(780, 90, 48, '#FFCCE6BB')
-    for i = 0, 6 do
-        local x = (i * 245 - self.camera * 0.22) % 1450 - 200
-        graphics.drawVector(self.cloud, x, 80 + (i % 3) * 40, {pivotX = 0, pivotY = 0, width = 150, height = 48})
+    self.renderer:draw(self)
+    self.controls:draw()
+end
+
+function Game:unload()
+    input.clearVirtual()
+    if self.effects ~= nil then
+        self.effects:clear()
     end
-    for i = 0, 10 do
-        graphics.drawRect({x = i * 180 - self.camera * 0.35, y = 290 + (i % 3) * 28, width = 130, height = 300}, '#FF173F53')
-        graphics.drawRect({x = i * 140 - self.camera * 0.55, y = 360 + (i % 2) * 35, width = 90, height = 220}, '#FF215463')
-    end
-    for _, platform in ipairs(self.level.platforms) do
-        for x = platform.x, platform.x + platform.width - 1, 32 do
-            graphics.drawVector(self.tile, x - self.camera, platform.y, {pivotX = 0, pivotY = 0})
-        end
-        graphics.drawRect({x = platform.x - self.camera, y = platform.y + 32, width = platform.width, height = 540}, '#FF304B50')
-    end
-    for index, coin in ipairs(self.level.coins) do
-        if not self.collected[index] then
-            graphics.drawVector(self.coin, coin.x - self.camera, coin.y + math.sin(self.time * 4 + index) * 4, {pivotX = 0, pivotY = 0, width = 20, height = 20})
-        end
-    end
-    for _, enemy in ipairs(self.level.enemies) do
-        graphics.drawVector(self.enemy, enemy.x + math.sin(self.time * 1.4) * 45 - self.camera, enemy.y, {pivotX = 0, pivotY = 0})
-    end
-    graphics.drawVector(self.flag, self.level.width - 90 - self.camera, 334, {pivotX = 0, pivotY = 0, width = 36, height = 114})
-    graphics.drawVector(self.hero, self.player.x - self.camera, self.player.y, {pivotX = 0, pivotY = 0, width = 30, height = 40, flipHorizontal = self.player.facingLeft})
-    graphics.drawRect({x = 20, y = 18, width = 260, height = 42}, '#CC0D2135')
-    graphics.drawText(nil, 'SKYBOUND   /   ' .. self.score .. ' COINS', 34, 28, {size = 19, color = '#FFD4EEDA'})
-    graphics.drawText(nil, 'R to restart', 800, 28, {size = 17, color = '#FF9ABDC8'})
-    if self.won then
-        graphics.drawRect({x = 190, y = 170, width = 580, height = 170}, '#EE0D2135')
-        graphics.drawText(nil, 'YOU MADE IT!', 305, 202, {size = 38, color = '#FF9BE4C6'})
-        graphics.drawText(nil, 'Now make this game your own. Press R to restart.', 225, 270, {size = 20})
+
+    if self.world ~= nil then
+        self.world:destroy()
     end
 end
 

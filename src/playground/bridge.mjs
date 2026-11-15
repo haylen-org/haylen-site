@@ -1,6 +1,6 @@
 // Authenticate once, then use a private MessagePort so cross-frame focus
 // transitions cannot interfere with source checks on later commands.
-export class GameBridge {
+export class PlayerBridge {
   constructor(onEvent) {
     this.onEvent = onEvent;
     window.addEventListener('message', (event) => this.connect(event));
@@ -10,8 +10,8 @@ export class GameBridge {
     this.session = crypto.randomUUID();
     this.bytes = bytes;
     this.frame = document.createElement('iframe');
-    this.frame.title = 'Haylen game preview';
-    this.frame.id = 'game-frame';
+    this.frame.title = 'Haylen project preview';
+    this.frame.id = 'runtime-frame';
     this.frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     this.frame.allow = 'autoplay; fullscreen';
     this.frame.src = `./runtime#${this.session}`;

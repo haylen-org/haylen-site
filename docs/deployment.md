@@ -23,8 +23,7 @@ HAYLEN_REQUIRE_ALL_DEMOS=1 HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run build
 npm test
 npx playwright install chromium firefox webkit
 npm run test:browser
-HAYLEN_REQUIRE_ALL_DEMOS=1 npm run test:demos
-HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run test:playground
+npm run test:playground
 ```
 
 The upstream compiler needs Python 3.15, CMake, Ninja and a C++20 toolchain. It installs its pinned Emscripten and other tools. Linux prerequisites are listed in the workflow. The site's runtime and tests use Node.js 22; there are no Python site scripts.
@@ -92,25 +91,25 @@ Configure these values in the website's GitHub repository:
 | Variable or secret | `CLOUDFLARE_PAGES_PROJECT` | Exact name of the Direct Upload project; variable takes precedence. |
 | Optional variable  | `CLOUDFLARE_MAX_FILES`     | File-count allowance for the actual Pages plan; defaults to 20000.  |
 
-Push to `main` or run **Publish Haylen site and WASM demos** manually. Pull requests run the website checks without production secrets or uploads. Production performs website checks, validates configuration, checks out Haylen `main`, compiles every sample, injects every folder into `dist/`, opens each demo in a separate Chromium tab and uploads **all of `dist/` in one deployment**. Publication is enabled only after `CLOUDFLARE_PAGES_PROJECT` is set. Until then, website verification still runs and reports a setup notice. When publication is enabled, missing secrets, a failed sample, runtime smoke failure or exceeded hosting limit stops the upload.
+Push to `main` or run **Publish** manually. Pull requests run the basic website and editor checks without production uploads. Production validates configuration, checks out Haylen `main`, compiles every sample, stages the editable player, validates the complete static output and uploads **all of `dist/` once**. It does not run games or native browser tests. Publication requires `CLOUDFLARE_PAGES_PROJECT`; missing credentials, a failed build, missing artifacts or exceeded hosting limits stop the upload.
 
-The manifest records the checked-out engine commit in CI. `main` intentionally tracks the latest engine; its integration can require maintenance when upstream contracts change. Native compilation is distinct from browser startup checks and from a complete gameplay test. Browser screenshots and traces are retained as workflow artifacts.
+The manifest records the checked-out engine commit in CI. `main` intentionally tracks the latest engine; upstream API changes can require maintenance. Compilation and static validation do not prove native startup or gameplay. Screenshots from the basic website/editor checks are retained as workflow artifacts.
 
 The `/web-demos/*` headers retain cross-origin isolation for native sample pages. The current single-thread Haylen web player does not require SharedArrayBuffer or isolation. All native resources are served from the same static origin. Browser capabilities and hardware still govern WebGPU, WebGL2 and audio availability.
 
 ## Local browser playground
 
-`/playground/` contains the editor. Its Lua/JSON syntax highlighting, project tree, file/folder operations, drag-and-drop imports, image previews, ZIP imports/exports and IndexedDB saves run locally. Play/Pause/Stop, hot reload, diagnostics and touch controls talk to the actual editable Haylen player in a disposable iframe.
+`/playground/` contains the editor. Its Lua/JSON syntax highlighting, project tree, file/folder operations, drag-and-drop imports, image previews, ZIP imports/exports and IndexedDB saves run locally. Play/Pause/Stop, hot reload and diagnostics talk to the actual editable Haylen player in a disposable iframe. The IDE has generic panels and never supplies game controls. Keyboard, pointer and touch input are implemented by the imported project. The activity rail toggles explorer, code, preview and console, while closing an editor tab preserves its file. Project ZIP import replaces the complete workspace after confirmation.
 
 After compiling the web player upstream, run `npm run playground:runtime -- --engine-dir ../haylen`. The command stages the four official runtime artifacts under ignored `.cache/web-player/`, validates the complete WASM/API and records its digest and available Git provenance. It does not rebuild or patch the engine. The site builder injects this player into `dist/playground/runtime/`. Production sets `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1` and fails when it is missing or invalid; a website-only build retains editing/export with Play disabled.
 
-The production workflow stages the player after sample compilation, tests the playground and publishes it in the same `dist/` upload. No extra Cloudflare service, API key, database or application server is needed.
+The production workflow stages the player after sample compilation, validates its static bundle and publishes it in the same `dist/` upload. No extra Cloudflare service, API key, database or application server is needed.
 
 The browser service worker caches only the playground and its runtime/shared assets. Wait for **Ready offline** before disconnecting. First visits still require a download. Updates activate when old playground tabs close; they do not force-reload unsaved work. Files are local to this domain and browser profile. Export ZIPs as backups; clearing browser storage can remove the workspace and offline cache. Use one editing tab per workspace.
 
 The preview can recover ordinary Lua errors. It cannot reliably interrupt an infinite Lua/native loop on the engine's current single thread. C++ and native plugin compilation still use Haylen's normal toolchain.
 
-Run `npm run test:playground` for the editor/browser matrix and real player integration. Runtime cases skip when an optional local player is absent, but must run for production. CI verifies the editor in all configured browsers, then runs the complete player checks in Chromium after native compilation, matching the native-demo smoke-test environment. Local desktop checks also exercise the player in Firefox and WebKit. Results and screenshots stay in `.cache/playground-results/`.
+Run `npm run test:playground` for basic editor controls, file operations, local saves and ZIP imports/exports across the configured browser matrix. These tests do not press Play, load native samples or check gameplay. Results and screenshots stay in `.cache/playground-results/`.
 
 ## Search and social previews
 
@@ -120,7 +119,7 @@ Attach the domain to this Pages project and use HTTPS. After deployment, verify 
 
 References: [Google canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls), [Google sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Open Graph](https://ogp.me/), [Schema.org SoftwareSourceCode](https://schema.org/SoftwareSourceCode).
 
-The browser suite runs Chromium, Firefox and WebKit. On macOS the Firefox configuration uses isolated app-data directories under `.cache/firefox/`, avoiding access to the user's personal Firefox data ([Mozilla issue](https://bugzilla.mozilla.org/show_bug.cgi?id=2060476)). The hero uses standard CSS/SVG animation, with a still no-JavaScript fallback, pause control and reduced-motion support. Tailwind CSS 4 requires modern browser versions ([compatibility](https://tailwindcss.com/docs/compatibility)); do not claim support for every historical browser version.
+The basic browser suite runs Chromium, Firefox and WebKit. On macOS the Firefox configuration uses isolated app-data directories under `.cache/firefox/`, avoiding access to personal browser data. The hero uses standard CSS/SVG animation with reduced-motion and no-JavaScript fallbacks. Tailwind CSS 4 requires modern browser versions ([compatibility](https://tailwindcss.com/docs/compatibility)); do not claim support for every historical browser version.
 
 References: [Cloudflare limits](https://developers.cloudflare.com/pages/platform/limits/), [Direct Upload with CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/), [Haylen distribution](https://github.com/haylen-org/haylen/blob/main/docs/tools/distribution.md), [Haylen protected content](https://github.com/haylen-org/haylen/blob/main/docs/content/content.md).
 

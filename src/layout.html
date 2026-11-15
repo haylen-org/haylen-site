@@ -31,47 +31,8 @@
   </head>
   <body data-page="{{PAGE}}">
     <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-header">
-      <div class="container header-inner">
-        <a class="brand" href="{{PREFIX}}./" aria-label="Haylen home"
-          ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
-        /></a>
-        <nav class="desktop-nav" aria-label="Main navigation">{{DESKTOP_NAV}}</nav>
-        <a class="header-github" href="https://github.com/haylen-org/haylen"
-          >{{ICON_GITHUB}}<span>GitHub</span>{{ICON_EXTERNAL_LINK}}</a
-        ><button
-          class="menu-toggle"
-          id="menu-toggle"
-          aria-expanded="false"
-          aria-controls="mobile-nav"
-          aria-label="Open navigation"
-        >
-          <span></span><span></span>
-        </button>
-      </div>
-      <nav id="mobile-nav" class="mobile-nav container" aria-label="Mobile navigation" hidden>
-        {{MOBILE_NAV}}
-      </nav>
-    </header>
+    {{SITE_HEADER}}
     <main id="main">{{BODY}}</main>
-    <footer class="site-footer">
-      <div class="container footer-top">
-        <a class="brand" href="{{PREFIX}}./" aria-label="Haylen home"
-          ><img src="{{PREFIX}}assets/brand/logo.svg" alt="Haylen" width="126" height="38"
-        /></a>
-        <p>An open-source engine for games and apps.</p>
-        <a href="https://github.com/haylen-org/haylen">Source code {{ICON_EXTERNAL_LINK}}</a>
-      </div>
-      <div class="container footer-bottom">
-        <span>© {{YEAR}} Haylen contributors</span>
-        <nav aria-label="Footer navigation">
-          <a href="{{PREFIX}}about/">About</a><a href="{{PREFIX}}demos/">Demos</a
-          ><a href="{{PREFIX}}playground/">Playground</a
-          ><a href="https://github.com/haylen-org/haylen/tree/main/docs">Documentation</a
-          ><a href="https://github.com/haylen-org/haylen/blob/main/LICENSE">MIT license</a>
-        </nav>
-        <span>Made with C++ and Lua.</span>
-      </div>
-    </footer>
+    {{SITE_FOOTER}}
   </body>
 </html>

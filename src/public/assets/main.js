@@ -3,32 +3,34 @@
 
   const visual = document.querySelector('.engine-visual');
   if (visual) {
-    const motionButton = visual.querySelector('.motion-toggle');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const setPaused = (paused) => {
-      visual.dataset.motion = paused ? 'paused' : 'running';
-      const label = paused ? 'Play animation' : 'Pause animation';
-      motionButton.setAttribute('aria-label', label);
-      motionButton.setAttribute('aria-pressed', String(paused));
-      motionButton.querySelector('span').textContent = label;
-    };
-    setPaused(reducedMotion.matches);
-    visual.dataset.documentHidden = String(document.hidden);
-    motionButton.hidden = reducedMotion.matches;
-    motionButton.addEventListener('click', () => setPaused(visual.dataset.motion !== 'paused'));
-    reducedMotion.addEventListener('change', (event) => {
-      setPaused(event.matches);
-      motionButton.hidden = event.matches;
-    });
-    document.addEventListener('visibilitychange', () => {
+    // Keep the CSS animation alive while paused so returning preserves its progress.
+    const updateMotion = () => {
       visual.dataset.documentHidden = String(document.hidden);
+      if (reducedMotion.matches) {
+        visual.dataset.motion = 'static';
+      } else {
+        visual.dataset.motion =
+          !document.hidden && visual.dataset.motionVisible === 'true' ? 'running' : 'paused';
+      }
+    };
+
+    visual.dataset.motionVisible = String(!('IntersectionObserver' in window));
+    reducedMotion.addEventListener('change', updateMotion);
+    document.addEventListener('visibilitychange', updateMotion);
+    window.addEventListener('pageshow', updateMotion);
+    window.addEventListener('pagehide', () => {
+      visual.dataset.documentHidden = 'true';
+      if (!reducedMotion.matches) visual.dataset.motion = 'paused';
     });
     if ('IntersectionObserver' in window) {
       const observer = new IntersectionObserver(([entry]) => {
         visual.dataset.motionVisible = String(entry.isIntersecting);
+        updateMotion();
       });
       observer.observe(visual);
     }
+    updateMotion();
   }
 
   const menuButton = document.getElementById('menu-toggle');

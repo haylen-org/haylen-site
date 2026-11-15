@@ -3,7 +3,7 @@
     "path": "games/tiny-island",
     "name": "Tiny Island",
     "category": "Games",
-    "description": "A 2D survival game with an island, characters, combat and a day-and-night cycle.",
+    "description": "A survival game with an island, characters, combat and a day-and-night cycle.",
     "cover": "island",
     "image": "games-tiny-island-preview.png"
   },

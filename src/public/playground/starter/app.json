@@ -1,10 +1,21 @@
 {
-  "name": "Skybound",
-  "identifier": "com.haylen.playground.skybound",
-  "version": "1.0.0",
+  "name": "Emberfall",
+  "identifier": "com.haylen.playground.emberfall",
+  "version": "2.0.0",
   "orientation": "landscape",
-  "window": { "title": "Skybound", "width": 960, "height": 540, "resizable": true },
-  "design": { "width": 960, "height": 540, "scaling": "fit" },
-  "lifecycle": { "pauseOnFocusLoss": false },
-  "clearColor": "#FF102C46"
+  "window": {
+    "title": "Emberfall",
+    "width": 1280,
+    "height": 720,
+    "resizable": true
+  },
+  "design": {
+    "width": 1280,
+    "height": 720,
+    "scaling": "fit"
+  },
+  "lifecycle": {
+    "pauseOnFocusLoss": false
+  },
+  "clearColor": "#FF0A101A"
 }

@@ -1,9 +1,13 @@
--- Welcome to Skybound, a tiny platform game made with Haylen.
--- Start with player.lua to change the movement. Edit level.json to build a level.
+-- Emberfall is an editable platform game using Haylen's public Lua APIs.
+-- The scene connects the focused movement, combat, physics and rendering modules.
 local assets = require('haylen.assets')
 local input = require('haylen.input')
 local scene = require('haylen.scene')
+local Game = require('game')
 
+-- Named actions share keyboard, gamepad and project-owned touch controls.
 input.loadActions(assets.json('input.json'))
-scene.push(require('game').new())
-print('Welcome to Skybound! Move with arrows or A/D. Jump with Space.')
+input.setTouchAsMouse(false)
+
+-- Haylen calls the scene's load, update, fixedUpdate, render and unload methods.
+scene.push(Game.new())

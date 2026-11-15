@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240" fill="none">
+  <defs><radialGradient id="light"><stop stop-color="#ffc489"/><stop offset="1" stop-color="#855a7b" stop-opacity="0"/></radialGradient><pattern id="alpha" width="12" height="12" patternUnits="userSpaceOnUse"><path fill="#192132" d="M0 0h12v12H0z"/><path fill="#202a3e" d="M0 0h6v6H0zm6 6h6v6H6z"/></pattern></defs>
+  <path fill="#0f141e" d="M0 0h360v240H0z"/>
+  <g font-family="system-ui,sans-serif" font-size="14" fill="#bbc8e3"><text x="18" y="40">Sprites</text><text x="138" y="40">Light</text><text x="258" y="40">Frame</text></g>
+  <rect x="16" y="57" width="96" height="134" rx="3" fill="url(#alpha)" stroke="#52627f"/><rect x="136" y="57" width="96" height="134" rx="3" fill="#151a27" stroke="#52627f"/><rect x="256" y="57" width="88" height="134" rx="3" fill="#25304b" stroke="#8194c6"/>
+  <rect x="29" y="133" width="29" height="44" rx="2" fill="#655198" stroke="#c2a8ff"/><circle cx="84" cy="160" r="17" fill="#a96e43" stroke="#f2b27e"/>
+  <circle cx="184" cy="105" r="44" fill="url(#light)"/><circle cx="184" cy="92" r="5" fill="#ffe1ae"/>
+  <circle cx="299" cy="114" r="42" fill="url(#light)" opacity=".7"/><rect x="267" y="133" width="29" height="44" rx="2" fill="#856cbd" stroke="#d3bdff"/><circle cx="320" cy="160" r="17" fill="#cf905b" stroke="#ffd29d"/><circle cx="299" cy="92" r="4" fill="#ffe1ae"/>
+  <g stroke="#91a4cd"><path d="M16 178h96m144 0h88M117 120h13m-5-4 5 4-5 4m112-4h13m-5-4 5 4-5 4"/></g>
+  <path d="M16 211h328" stroke="#303b50"/><text x="18" y="231" font-family="system-ui,sans-serif" font-size="12" fill="#96a7c7">Compose a scene from layers and light.</text>
+</svg>

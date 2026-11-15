@@ -14,7 +14,16 @@ test('project paths, folder operations and conflicts are atomic', () => {
     ['content/image.png', new Uint8Array([1, 2])],
   ]);
   p.add('empty', true);
+  const originalMain = p.files.get('source/main.lua');
+  const originalConfig = p.files.get('app.json');
   p.move('source', 'game/scripts');
+  assert.strictEqual(p.files.get('game/scripts/main.lua'), originalMain);
+  assert.strictEqual(p.files.get('app.json'), originalConfig);
+  const candidate = p.fork();
+  candidate.import([['content/new.png', new Uint8Array([3, 4])]]);
+  assert.strictEqual(candidate.files.get('app.json'), originalConfig);
+  assert.equal(p.has('content/new.png'), false);
+  assert.equal(candidate.has('content/new.png'), true);
   assert.equal(p.text('game/scripts/main.lua'), 'print(1)');
   assert.ok(p.folders.has('game'));
   assert.throws(() => p.move('game', 'game/subfolder'));

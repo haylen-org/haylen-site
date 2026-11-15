@@ -7,3 +7,5 @@ release/
 src/public/favicon.svg
 src/public/assets/brand/
 package-lock.json
+src/public/playground/starter/content/characters/
+src/public/playground/starter/content/effects/effects.json

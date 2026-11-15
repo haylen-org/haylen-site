@@ -34,6 +34,8 @@ const uiIcons = {
   MOON: 'moon',
   BOXES: 'boxes',
   PLAY: 'play',
+  BACK: 'arrow-left',
+  EXPAND: 'maximize-2',
   PAUSE: 'pause',
   STOP: 'square',
   FILE: 'file-code-2',
@@ -44,6 +46,8 @@ const uiIcons = {
   DOWNLOAD: 'download',
   TRASH: 'trash-2',
   CHEVRON: 'chevron-right',
+  CLOSE: 'x',
+  PANEL: 'panel-left-close',
 };
 const brands = {
   APPLE: faApple,

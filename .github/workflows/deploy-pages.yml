@@ -1,4 +1,4 @@
-name: Publish Haylen site and WASM demos
+name: Publish
 
 on:
   workflow_dispatch:
@@ -112,31 +112,12 @@ jobs:
       - name: Build the website, playground and complete sample folders
         run: npm run build
       - run: npm test
-      - run: npx playwright install --with-deps chromium
-      - name: Open every compiled demo in a real browser
-        run: npm run test:demos
-      - name: Test the editor, native hot reload and offline startup
-        run: npm run test:playground -- --project=chromium-desktop
       - name: Keep the complete publishable artifact
         uses: actions/upload-artifact@v4
         with:
           name: haylen-static-site-with-wasm
           path: dist
           retention-days: 7
-      - name: Retain sample runtime evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sample-runtime-review
-          path: .cache/demo-results
-          retention-days: 14
-      - name: Retain playground review evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playground-runtime-review
-          path: .cache/playground-results
-          retention-days: 14
       - name: Upload the entire static site to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

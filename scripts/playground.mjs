@@ -34,6 +34,7 @@ export async function buildPlayground(root, dist) {
     entryPoints: { editor: 'src/playground/editor.mjs', 'runtime-host': 'src/playground/runtime.mjs' },
     outdir: path.join(dist, 'playground'),
     bundle: true,
+    external: ['./starter/*'],
     format: 'esm',
     minify: true,
     target: ['chrome111', 'firefox128', 'safari16.4'],

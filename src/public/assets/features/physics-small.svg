@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240" fill="none">
+  <path fill="#0f141e" d="M0 0h360v240H0z"/>
+  <path d="M16 194h328M40 54h62" stroke="#7d8daa" stroke-width="2"/>
+  <circle cx="71" cy="57" r="5" fill="#172239" stroke="#b3c6f6"/>
+  <path d="m73 62 36 71" stroke="#9db3ef" stroke-width="2"/>
+  <circle cx="122" cy="158" r="28" fill="#303f6a" stroke="#b2c5ff" stroke-width="1.5"/>
+  <circle cx="71" cy="158" r="28" stroke="#6b7a98" stroke-dasharray="3 4"/>
+  <path d="m123 94 29-25h33" stroke="#6d85ad"/><text x="157" y="59" font-family="system-ui,sans-serif" font-size="13" fill="#c2cfe8">Joint</text>
+  <rect x="179" y="144" width="45" height="45" rx="2" fill="#5d477d" stroke="#ccb1ff" stroke-width="1.5" transform="rotate(-12 201 166)"/>
+  <circle cx="289" cy="160" r="34" fill="#644331" stroke="#f1b07b" stroke-width="1.5"/>
+  <path d="M289 194v-59m-4 5 4-5 4 5" stroke="#ffcf9c" stroke-width="1.5"/><circle cx="289" cy="194" r="4" fill="#ffcf9c"/>
+  <path d="M320 44v37m-4-5 4 5 4-5" stroke="#9dacca"/><text x="258" y="31" font-family="system-ui,sans-serif" font-size="12" fill="#aebfdf">Gravity</text>
+  <path d="m289 198 13 16h40" stroke="#ab8863"/><text x="241" y="231" font-family="system-ui,sans-serif" font-size="12" fill="#ecc394">Contact normal</text>
+</svg>

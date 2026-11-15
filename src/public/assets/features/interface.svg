@@ -1,1 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="260" viewBox="0 0 480 260"><defs><linearGradient id="accent" x1="0" x2="1" y2="1"><stop stop-color="#67dce9"/><stop offset="1" stop-color="#a28bff"/></linearGradient><radialGradient id="glow"><stop stop-color="#5268c2" stop-opacity=".25"/><stop offset="1" stop-color="#5268c2" stop-opacity="0"/></radialGradient><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" stroke="#8494c4" stroke-opacity=".07" fill="none"/></pattern></defs><path fill="#10151f" d="M0 0h480v260H0z"/><path fill="url(#grid)" d="M0 0h480v260H0z"/><ellipse cx="240" cy="138" rx="210" ry="140" fill="url(#glow)"/><rect x="58" y="35" width="364" height="193" rx="12" fill="#171e2b" stroke="#465474"/><path d="M58 66h364M140 66v162" stroke="#354159"/><circle cx="76" cy="51" r="3" fill="#ad8bdc"/><circle cx="88" cy="51" r="3" fill="#dcaa7b"/><circle cx="100" cy="51" r="3" fill="#74bcb4"/><rect x="72" y="84" width="54" height="8" rx="4" fill="#7995bb"/><path d="M73 112h38m-38 18h31m-31 18h35m-35 18h28" stroke="#53617d" stroke-width="5" stroke-linecap="round"/><rect x="158" y="83" width="119" height="61" rx="7" fill="#213342" stroke="#406b82"/><path d="m170 130 20-22 21 10 21-26 31 17" fill="none" stroke="#6dd5df" stroke-width="2"/><rect x="291" y="83" width="113" height="61" rx="7" fill="#302b49" stroke="#635486"/><path d="M307 98h54m-54 14h77m-77 14h36" stroke="#a697cc" stroke-width="4" stroke-linecap="round"/><rect x="158" y="158" width="246" height="23" rx="5" fill="#101722" stroke="#3d4b65"/><path d="M169 169h91" stroke="#53617d" stroke-width="4" stroke-linecap="round"/><rect x="325" y="194" width="79" height="20" rx="5" fill="#9bdde5"/><path d="M344 204h40" stroke="#234350" stroke-width="3" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" fill="none">
+  <path fill="#0f141e" d="M0 0h640v360H0z"/>
+  <g font-family="system-ui,sans-serif" font-size="13" fill="#aab7d1"><text x="34" y="45">WIDE LAYOUT</text><text x="459" y="45">NARROW</text></g>
+  <rect x="30" y="65" width="356" height="218" rx="4" fill="#171e2c" stroke="#53627e"/>
+  <path d="M30 105h356M137 105v178" stroke="#36445d"/>
+  <path d="M48 86h14m-14-4h14m-14 8h14" stroke="#b3c3e6" stroke-width="1.5"/>
+  <g fill="#a7b7d7" font-family="system-ui,sans-serif" font-size="12"><text x="73" y="90">Interface</text><text x="49" y="133">Overview</text><text x="49" y="163">Controls</text><text x="49" y="193">Settings</text></g>
+  <rect x="41" y="178" width="86" height="24" rx="3" fill="#526bbb" fill-opacity=".22"/>
+  <rect x="154" y="122" width="214" height="47" rx="3" fill="#1e293e" stroke="#465a80"/>
+  <rect x="165" y="134" width="24" height="23" rx="3" fill="#7c91d9"/>
+  <path d="M203 140h86m-86 10h57" stroke="#8a9ebd" stroke-width="4" stroke-linecap="round"/>
+  <path d="M157 190h80m-80 20h110" stroke="#7084a6" stroke-width="5" stroke-linecap="round"/>
+  <rect x="289" y="229" width="79" height="31" rx="3" fill="#9fb2fb"/>
+  <text x="328" y="249" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#1a2641">Continue</text>
+  <rect x="455" y="65" width="151" height="242" rx="4" fill="#171e2c" stroke="#7084ab"/>
+  <path d="M455 105h151" stroke="#36445d"/>
+  <path d="M469 82h13m-13 5h13m-13 5h13" stroke="#b3c3e6" stroke-width="1.5"/>
+  <text x="496" y="90" font-family="system-ui,sans-serif" font-size="12" fill="#a7b7d7">Interface</text>
+  <rect x="468" y="121" width="125" height="61" rx="3" fill="#1e293e" stroke="#465a80"/>
+  <rect x="478" y="132" width="23" height="22" rx="3" fill="#7c91d9"/>
+  <path d="M513 138h65m-65 10h42M478 170h104" stroke="#8a9ebd" stroke-width="4" stroke-linecap="round"/>
+  <path d="M471 205h74m-74 18h109" stroke="#7084a6" stroke-width="5" stroke-linecap="round"/>
+  <rect x="468" y="251" width="125" height="33" rx="3" fill="#9fb2fb"/>
+  <text x="530" y="272" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#1a2641">Continue</text>
+  <path d="M399 174h41m-6-6 6 6-6 6" stroke="#9eaeef" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g stroke="#6f85bc" stroke-dasharray="3 4"><path d="M30 310v13m356-13v13M30 317h356M455 320v13m151-13v13M455 327h151"/></g>
+  <g fill="#8998b6" font-family="system-ui,sans-serif" font-size="12"><text x="132" y="342">Shared components</text><text x="489" y="347">Flexible layout</text></g>
+</svg>

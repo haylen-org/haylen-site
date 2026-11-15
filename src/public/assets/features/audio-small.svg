@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240" fill="none">
+  <path fill="#0f141e" d="M0 0h360v240H0z"/>
+  <g font-family="system-ui,sans-serif" font-size="13" fill="#adbedf"><text x="18" y="31">Bindings</text><text x="258" y="31">Action</text></g>
+  <g fill="#1a253c" stroke="#5e739b"><rect x="16" y="46" width="150" height="31" rx="2"/><rect x="16" y="89" width="150" height="31" rx="2"/><rect x="16" y="132" width="150" height="31" rx="2"/></g>
+  <g font-family="ui-monospace,monospace" font-size="13" fill="#c4d2ec"><text x="28" y="66">key:space</text><text x="28" y="109">button:south</text><text x="28" y="152">virtual:jump</text></g>
+  <path d="M166 61h32v43h35m-67 0h67m-67 43h32v-43m29-5 6 5-6 5" stroke="#849cd0" stroke-width="1.5"/>
+  <rect x="239" y="81" width="105" height="47" rx="2" fill="#293c66" stroke="#a6baf3"/><text x="291" y="111" text-anchor="middle" font-family="ui-monospace,monospace" font-size="18" fill="#e2eafe">jump</text>
+  <path d="M16 197h328" stroke="#303c54"/>
+  <g stroke="#aaade6" stroke-width="3" stroke-linecap="round"><path d="M24 190v14M35 183v28M46 174v46M57 186v22M68 192v10M79 180v34M90 172v50M101 181v32M112 188v18M123 192v10M134 184v26M145 175v44M156 183v28M167 190v14M178 193v8M189 182v30M200 172v50M211 180v34M222 186v22M233 191v12M244 184v26M255 177v40M266 185v24M277 189v16M288 193v8M299 188v18M310 184v26M321 191v12M332 194v6"/></g>
+  <text x="18" y="237" font-family="system-ui,sans-serif" font-size="12" fill="#96a7c7">Music, sound effects and positional audio.</text>
+</svg>

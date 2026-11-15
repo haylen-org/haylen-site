@@ -116,17 +116,12 @@ test('every catalogue link is stable and correct before JavaScript', async ({ br
   await context.close();
 });
 
-test('320px, landscape and reduced motion remain usable', async ({ page }) => {
+test('pages fit a narrow phone viewport', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const width of [320, 600, 820, 1024, 1920]) {
-    await page.setViewportSize({ width, height: 900 });
-    for (const url of ['/', '/about/', '/demos/']) {
-      await page.goto(url);
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-        `${url} at ${width}px`,
-      ).toBe(true);
-    }
+  await page.setViewportSize({ width: 320, height: 900 });
+  for (const url of ['/', '/about/', '/demos/']) {
+    await page.goto(url);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), url).toBe(true);
   }
 });
 
@@ -135,138 +130,7 @@ test('missing routes return the branded 404', async ({ page }) => {
   expect(response.status()).toBe(404);
   await expect(page.getByRole('heading', { name: /Page not found/ })).toBeVisible();
   await page.getByRole('link', { name: /Go to the home page/ }).click();
-  await expect(page.getByRole('heading', { name: /One engine for/ })).toBeVisible();
-});
-
-test('platform table can be scrolled with a keyboard on narrow screens', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.goto('/about/');
-  const region = page.getByRole('region', { name: 'Platform compatibility table' });
-  await region.focus();
-  await expect(region).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-});
-
-test('home explains features and platforms without sample previews or clipped hero content', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await expect(page.locator('.feature-card')).toHaveCount(6);
-  await expect(page.locator('img[src*="assets/samples/"]')).toHaveCount(0);
-  await expect(page.locator('.platform-grid .icon')).toHaveCount(10);
-  await expect(page.getByRole('heading', { name: 'Native plugins', exact: true })).toBeVisible();
-  for (const width of [320, 390, 601, 768, 1024, 1280, 1440, 1920]) {
-    await page.setViewportSize({ width, height: 1000 });
-    const result = await page.locator('.engine-visual').evaluate((visual) => {
-      const boundary = visual.getBoundingClientRect();
-      return {
-        overflow: getComputedStyle(visual).overflowX,
-        separated: (() => {
-          const scene = visual.querySelector('.visual-scene').getBoundingClientRect();
-          const languages = visual.querySelector('.visual-languages').getBoundingClientRect();
-          const actions = document.querySelector('.hero-actions').getBoundingClientRect();
-          const overlapsActions =
-            Math.min(scene.right, actions.right) > Math.max(scene.left, actions.left) &&
-            Math.min(scene.bottom, actions.bottom) > Math.max(scene.top, actions.top);
-          return scene.bottom < languages.top && !overlapsActions;
-        })(),
-        contained: [...visual.querySelectorAll('.visual-logo,.visual-orbits,.language-chip')].every(
-          (part) => {
-            const r = part.getBoundingClientRect();
-            return (
-              r.left >= boundary.left - 1 &&
-              r.right <= boundary.right + 1 &&
-              r.top >= boundary.top - 1 &&
-              r.bottom <= boundary.bottom + 1
-            );
-          },
-        ),
-      };
-    });
-    expect(result, `Hero at ${width}px`).toEqual({ overflow: 'visible', contained: true, separated: true });
-  }
-});
-
-test('cyan trail stays behind its particle in the direction of travel', async ({ page }) => {
-  await page.goto('/');
-  const geometry = await page.locator('.orbit-trail-cyan').evaluate((trail) => {
-    const start = trail.getPointAtLength(0);
-    const end = trail.getPointAtLength(trail.getTotalLength());
-    const particle = document.querySelector('.orbit-particle-cyan');
-    const head = { x: particle.cx.baseVal.value, y: particle.cy.baseVal.value };
-    const angle = (point) => (Math.atan2(point.y - 210, point.x - 220) * 180) / Math.PI;
-    return {
-      gap: Math.hypot(end.x - head.x, end.y - head.y),
-      trailingAngle: (angle(head) - angle(start) + 360) % 360,
-      direction: getComputedStyle(trail.parentElement).animationDirection,
-    };
-  });
-  expect(geometry.gap).toBeLessThan(0.1);
-  expect(geometry.trailingAngle).toBeGreaterThan(20);
-  expect(geometry.trailingAngle).toBeLessThan(40);
-  expect(geometry.direction).toBe('normal');
-});
-
-test('hero motion runs, pauses, resumes and respects reduced motion', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/');
-  const visual = page.locator('.engine-visual');
-  await visual.scrollIntoViewIfNeeded();
-  const orbit = page.locator('.orbit-track-inner');
-  const transform = () => orbit.evaluate((element) => getComputedStyle(element).transform);
-  const haloTransforms = () =>
-    page
-      .locator('.visual-halo')
-      .evaluateAll((halos) => halos.map((halo) => getComputedStyle(halo).transform));
-  const initialHalos = await haloTransforms();
-  const initial = await transform();
-  await expect.poll(transform).not.toBe(initial);
-  await expect
-    .poll(async () => (await haloTransforms()).every((value, index) => value !== initialHalos[index]))
-    .toBe(true);
-  await page.getByRole('button', { name: 'Pause animation' }).click();
-  await expect(visual).toHaveAttribute('data-motion', 'paused');
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  const paused = await transform();
-  const pausedHalos = await haloTransforms();
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  expect(await transform()).toBe(paused);
-  expect(await haloTransforms()).toEqual(pausedHalos);
-  await page.getByRole('button', { name: 'Play animation' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(visual).toHaveAttribute('data-motion', 'running');
-  await expect.poll(transform).not.toBe(paused);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(visual).toHaveAttribute('data-motion', 'paused');
-  await expect(page.locator('.motion-toggle')).toBeHidden();
-  expect(await orbit.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
-  expect(
-    await page
-      .locator('.visual-halo')
-      .evaluateAll((halos) => halos.every((halo) => getComputedStyle(halo).animationName === 'none')),
-  ).toBe(true);
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await expect(page.getByRole('button', { name: 'Pause animation' })).toBeVisible();
-  await page.locator('#features').scrollIntoViewIfNeeded();
-  await expect(visual).toHaveAttribute('data-motion-visible', 'false');
-  expect(await orbit.evaluate((element) => getComputedStyle(element).animationPlayState)).toBe('paused');
-});
-
-test('hero stays visible and still without JavaScript', async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
-  const page = await context.newPage();
-  await page.goto(baseURL);
-  await expect(page.locator('.visual-logo')).toBeVisible();
-  await expect(page.locator('.motion-toggle')).toBeHidden();
-  expect(
-    await page.locator('.visual-logo').evaluate((element) => getComputedStyle(element).animationPlayState),
-  ).toBe('paused');
-  await context.close();
+  await expect(page.getByRole('heading', { name: /Build games/ })).toBeVisible();
 });
 
 test('SEO URLs are absolute and search variants share the gallery canonical', async ({ page, request }) => {

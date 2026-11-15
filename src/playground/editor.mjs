@@ -1,5 +1,6 @@
 import { basicSetup, EditorView } from 'codemirror';
 import { EditorState } from '@codemirror/state';
+import { search } from '@codemirror/search';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
@@ -10,14 +11,16 @@ import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { linter, setDiagnostics } from '@codemirror/lint';
 import { Project, encoder, isText, openDatabase, storage, limits, cleanPath } from './project.mjs';
 import { pack, unpack } from './archive.mjs';
-import { GameBridge } from './bridge.mjs';
+import { PlayerBridge } from './bridge.mjs';
+import { WorkspaceLayout } from './workspace-layout.mjs';
+import { Notifications } from './notifications.mjs';
+import { SearchPanel } from './search-panel.mjs';
 import './editor.css';
 
 const $ = (selector) => document.querySelector(selector);
 const runtimeAvailable = $('.playground').dataset.runtime === 'available';
-const status = (text) => {
-  $('#workspace-notice').textContent = text;
-};
+const notices = new Notifications();
+const status = (text) => notices.show(text);
 let project = new Project();
 let active = '';
 let selected = '';
@@ -40,25 +43,16 @@ let startupWatch;
 let playGeneration = 0;
 let reloadFromError = false;
 let errorInReload = false;
+let allowLeave = false;
+let focusAfterStart = false;
 const editorStates = new Map();
 const collapsed = new Set();
-const bridge = new GameBridge(handleRuntime);
+const workspace = new WorkspaceLayout(() => remember());
+const bridge = new PlayerBridge(handleRuntime);
 
 function icon(id) {
   return $(id).content.cloneNode(true);
 }
-function setPane(pane) {
-  if (pane === 'files' && matchMedia('(min-width: 601px)').matches) pane = 'code';
-  $('.pg-workspace').dataset.pane = pane;
-  document.querySelectorAll('button[data-pane]').forEach((button) => {
-    if (button.dataset.pane === pane) button.setAttribute('aria-current', 'true');
-    else button.removeAttribute('aria-current');
-  });
-}
-document
-  .querySelectorAll('button[data-pane]')
-  .forEach((button) => button.addEventListener('click', () => setPane(button.dataset.pane)));
-matchMedia('(min-width: 601px)').addEventListener('change', () => setPane($('.pg-workspace').dataset.pane));
 
 function log(message, level = 'info', source) {
   $('.pg-console-welcome')?.remove();
@@ -97,7 +91,7 @@ function remember() {
   saveRevision++;
   clearTimeout(saveTimer);
   $('#save-status').textContent = 'Saving…';
-  $('#dirty-mark').hidden = false;
+  $('#dirty-mark').hidden = !active;
   saveTimer = setTimeout(saveNow, 650);
 }
 function saveNow() {
@@ -108,6 +102,8 @@ function saveNow() {
     folders: [...project.folders],
     active,
     hotReload: $('#hot-reload').checked,
+    layout: { ...workspace.state },
+    collapsed: [...collapsed],
   };
   saving = saving
     .catch(() => {})
@@ -127,7 +123,7 @@ function saveNow() {
   return saving;
 }
 window.addEventListener('beforeunload', (event) => {
-  if (savedRevision !== saveRevision) {
+  if (!allowLeave && savedRevision !== saveRevision) {
     event.preventDefault();
     event.returnValue = '';
   }
@@ -139,23 +135,23 @@ document.addEventListener('visibilitychange', () => {
 const theme = EditorView.theme(
   {
     '&': { color: '#c8d7ea', backgroundColor: '#0d131d' },
-    '.cm-content': { caretColor: '#9aedde' },
+    '.cm-content': { caretColor: '#9dafff' },
     '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: '#162333' },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
-      backgroundColor: '#294759 !important',
+      backgroundColor: '#334575 !important',
     },
-    '.cm-cursor': { borderLeftColor: '#91ead9' },
-    '.cm-panels, .cm-tooltip': { backgroundColor: '#1c2b3e', color: '#d1e2f6', borderColor: '#435972' },
+    '.cm-cursor': { borderLeftColor: '#9dafff' },
+    '.cm-panels, .cm-tooltip': { backgroundColor: '#141720', color: '#e2e6f1', borderColor: '#2b3040' },
   },
   { dark: true },
 );
 const highlights = syntaxHighlighting(
   HighlightStyle.define([
     { tag: tags.keyword, color: '#c4a3ed' },
-    { tag: tags.string, color: '#a4c898' },
+    { tag: tags.string, color: '#a8cfb6' },
     { tag: tags.comment, color: '#6c819b', fontStyle: 'italic' },
     { tag: tags.number, color: '#e6b986' },
-    { tag: tags.function(tags.variableName), color: '#7bcbd7' },
+    { tag: tags.function(tags.variableName), color: '#91baff' },
     { tag: tags.operator, color: '#c6a8eb' },
     { tag: tags.propertyName, color: '#91c6e5' },
     { tag: tags.bool, color: '#dcacdf' },
@@ -175,6 +171,7 @@ function makeState(path) {
     doc: project.text(path),
     extensions: [
       basicSetup,
+      search({ createPanel: (view) => new SearchPanel(view), top: true }),
       theme,
       highlights,
       language(path),
@@ -225,10 +222,43 @@ function jumpTo(number = 1) {
   });
   view.focus();
 }
+function closeFile(persist = true) {
+  if (active && view) editorStates.set(active, view.state);
+  view?.destroy();
+  view = undefined;
+  if (assetUrl) URL.revokeObjectURL(assetUrl);
+  assetUrl = undefined;
+  active = '';
+  $('#active-file').textContent = 'No file open';
+  $('#language-label').textContent = '';
+  $('#code-editor').hidden = true;
+  $('#asset-preview').hidden = true;
+  $('#empty-editor').hidden = false;
+  $('#editor-status').hidden = true;
+  $('#close-file').disabled = true;
+  $('#dirty-mark').hidden = true;
+  renderTree();
+  if (persist) remember();
+}
+$('#close-file').addEventListener('click', () => closeFile());
+document.addEventListener('keydown', (event) => {
+  if (!(event.metaKey || event.ctrlKey) || document.querySelector('dialog[open]')) return;
+  if (event.key.toLowerCase() === 'b') {
+    event.preventDefault();
+    workspace.toggle('files');
+  }
+  if (event.key.toLowerCase() === 'w' && active) {
+    event.preventDefault();
+    closeFile();
+  }
+});
 function openFile(path, switchPane = true) {
   if (!project.files.has(path)) return;
   if (active && view && !$('#code-editor').hidden) editorStates.set(active, view.state);
   active = selected = path;
+  $('#empty-editor').hidden = true;
+  $('#editor-status').hidden = false;
+  $('#close-file').disabled = false;
   $('#active-file').textContent = path;
   $('#language-label').textContent = path.split('.').pop().toUpperCase();
   if (assetUrl) {
@@ -275,7 +305,7 @@ function openFile(path, switchPane = true) {
   }
   showSize();
   renderTree();
-  if (switchPane) setPane('code');
+  if (switchPane) workspace.show('code');
 }
 function renderTree() {
   const tree = $('#file-tree');
@@ -369,8 +399,12 @@ $('#file-tree').addEventListener('keydown', (event) => {
 });
 
 let dialogResolve;
-function ask(title, description, value, submit = 'Save') {
+let dialogValidate;
+function ask(title, description, value, submit = 'Save', validate) {
   if (dialogResolve) return Promise.resolve(null);
+  notices.clear();
+  dialogValidate = validate;
+  $('#path-input').removeAttribute('aria-invalid');
   $('#dialog-title').textContent = title;
   $('#dialog-description').textContent = description;
   $('#path-input').hidden = $('#path-label').hidden = value === null;
@@ -395,21 +429,50 @@ function finishDialog(value) {
 }
 $('#action-form').addEventListener('submit', (event) => {
   event.preventDefault();
-  finishDialog($('#path-input').hidden ? true : $('#path-input').value);
+  const value = $('#path-input').hidden ? true : $('#path-input').value;
+  try {
+    dialogValidate?.(value);
+    finishDialog(value);
+  } catch (error) {
+    $('#dialog-error').textContent = error.message;
+    $('#path-input').setAttribute('aria-invalid', 'true');
+    $('#path-input').focus();
+  }
 });
 $('#dialog-cancel').addEventListener('click', () => finishDialog(null));
-$('#action-dialog').addEventListener('cancel', (event) => {
-  event.preventDefault();
-  finishDialog(null);
+$('#action-dialog').addEventListener('close', () => {
+  if ($('#action-dialog').open) return;
+  const resolve = dialogResolve;
+  dialogResolve = undefined;
+  dialogValidate = undefined;
+  $('#action-dialog').returnValue = '';
+  resolve?.(null);
+});
+$('#path-input').addEventListener('input', () => {
+  $('#dialog-error').textContent = '';
+  $('#path-input').removeAttribute('aria-invalid');
 });
 const selectedFolder = () =>
   project.folders.has(selected) ? selected : selected.split('/').slice(0, -1).join('/');
+$('#back-home').addEventListener('click', async (event) => {
+  event.preventDefault();
+  await saveNow();
+  const description =
+    savedRevision === saveRevision
+      ? 'Your project is saved in this browser. Leave the editor and return to the Haylen home page?'
+      : 'The latest changes could not be saved. Export a ZIP to keep your work before leaving.';
+  if (!(await ask('Leave the playground?', description, null, 'Back to Home'))) return;
+  allowLeave = true;
+  location.assign($('#back-home').href);
+});
 async function addItem(folder) {
   const base = selectedFolder();
   const name = await ask(
     folder ? 'New folder' : 'New file',
     'Enter a path relative to the project root.',
     (base ? base + '/' : '') + (folder ? 'new-folder' : 'untitled.lua'),
+    'Save',
+    (value) => project.fork().add(value, folder),
   );
   if (!name) return;
   try {
@@ -418,6 +481,7 @@ async function addItem(folder) {
     selected = path;
     if (folder) renderTree();
     else openFile(path);
+    status('');
     remember();
     queueChanges();
   } catch (error) {
@@ -431,6 +495,10 @@ async function rename() {
     'Rename or move',
     'Change the name or enter a new folder path. References inside code are not changed.',
     from,
+    'Save',
+    (value) => {
+      if (value !== from) project.fork().move(from, value);
+    },
   );
   if (!requested || requested === from) return;
   try {
@@ -468,19 +536,21 @@ $('#delete-item').addEventListener('click', async () => {
   project.remove(path);
   editorStates.clear();
   selected = '';
-  const next = project.files.has(active) ? active : project.files.keys().next().value;
+  const next = project.files.has(active) ? active : null;
   active = '';
   if (next) openFile(next, false);
-  else {
-    view?.destroy();
-    view = undefined;
-    $('#active-file').textContent = 'No file selected';
-    $('#asset-preview').hidden = true;
-    renderTree();
-  }
+  else closeFile(false);
   remember();
   queueChanges();
 });
+
+function setBusy(value) {
+  busy = value;
+  $('#import-button').disabled = value;
+  $('#export-button').disabled = value;
+  $('#reset-button').disabled = value;
+  setRuntimeState(runtimeState);
+}
 
 function setRuntimeState(state) {
   runtimeState = state;
@@ -498,20 +568,46 @@ function setRuntimeState(state) {
   $('#stop').disabled = !['loading', 'running', 'paused', 'error'].includes(state);
 }
 const post = (type, detail = {}) => bridge.post(type, detail);
-function validatePlayable() {
+function expandPreview(expanded) {
+  const panel = $('.pg-output');
+  panel.classList.toggle('is-expanded', expanded);
+  panel.setAttribute('role', expanded ? 'dialog' : 'region');
+  if (expanded) panel.setAttribute('aria-modal', 'true');
+  else panel.removeAttribute('aria-modal');
+  const button = $('#expand-preview');
+  button.setAttribute('aria-label', expanded ? 'Restore editor layout' : 'Expand preview');
+  button.title = button.getAttribute('aria-label');
+  button.setAttribute('aria-pressed', String(expanded));
+  for (const selector of ['.pg-heading', '.pg-toolbar', '.pg-activity', '.pg-files', '.pg-code'])
+    $(selector).inert = expanded;
+  button.focus();
+}
+$('#expand-preview').addEventListener('click', () =>
+  expandPreview(!$('.pg-output').classList.contains('is-expanded')),
+);
+document.addEventListener('keydown', (event) => {
+  if (
+    event.key === 'Escape' &&
+    $('.pg-output').classList.contains('is-expanded') &&
+    !document.querySelector('dialog[open]')
+  )
+    expandPreview(false);
+});
+function validateProject() {
   if (!project.files.has('app.json') || !project.files.has('source/main.lua'))
     throw new Error('The project needs app.json and source/main.lua.');
   JSON.parse(project.text('app.json'));
 }
 async function play(fresh = false) {
-  if (!runtimeAvailable || booting) return;
+  if (!runtimeAvailable || booting || busy) return;
   if (runtimeState === 'paused' && !fresh) {
     post('resume');
     return;
   }
   const generation = ++playGeneration;
+  focusAfterStart = !$('#code-editor').contains(document.activeElement);
   try {
-    validatePlayable();
+    validateProject();
     status('');
     booting = true;
     bridge.destroy();
@@ -525,15 +621,16 @@ async function play(fresh = false) {
     runtimeFiles = new Map(project.files);
     const bytes = await pack(project);
     if (generation !== playGeneration) return;
+    if (matchMedia('(max-width: 1100px)').matches && focusAfterStart) workspace.show('preview');
     runtime = bridge.start(bytes, $('#preview'));
+    if (focusAfterStart) runtime.focus();
     $('#preview-cover').hidden = true;
     clearTimeout(startupWatch);
     startupWatch = setTimeout(() => {
       booting = false;
       setRuntimeState('fatal');
-      log('The game did not start. Use Play to restart the preview.', 'error');
+      log('The project did not start. Use Play to restart the preview.', 'error');
     }, 30000);
-    if (matchMedia('(max-width: 1100px)').matches) setPane('game');
   } catch (error) {
     booting = false;
     setRuntimeState('fatal');
@@ -576,11 +673,12 @@ function applyChanges() {
   }, 6000);
 }
 function handleRuntime({ type, detail }) {
+  if (type === 'escape' && $('.pg-output').classList.contains('is-expanded')) expandPreview(false);
   if (type === 'started') {
     clearTimeout(startupWatch);
     booting = false;
     setRuntimeState('running');
-    log(`Running ${detail.name || 'your game'}.`, 'success');
+    log(`Running ${detail.name || 'your project'}.`, 'success');
     queueChanges();
   }
   if (type === 'stopped') {
@@ -595,8 +693,7 @@ function handleRuntime({ type, detail }) {
   if (type === 'resumed') setRuntimeState('running');
   if (type === 'log') log(detail.line, detail.level);
   if (type === 'stats')
-    $('#game-hint').textContent =
-      `${Math.round(detail.fps)} FPS · ${detail.drawCalls} draws · Arrows + Space`;
+    $('#render-stats').textContent = `${Math.round(detail.fps)} FPS · ${detail.drawCalls} draws`;
   if (type === 'error' || type === 'fatal') {
     if (awaitingReload) errorInReload = true;
     clearTimeout(startupWatch);
@@ -607,7 +704,7 @@ function handleRuntime({ type, detail }) {
     const path = String(detail.file || '')
       .replace(/^@/, '')
       .replace(/^\/?app\//, '');
-    log(detail.message || 'The game reported an error.', 'error', { path, line: detail.line });
+    log(detail.message || 'The project reported an error.', 'error', { path, line: detail.line });
     if (detail.traceback) log(detail.traceback, 'error');
     if (path === active && view && isText(active)) {
       const line = view.state.doc.line(Math.max(1, Math.min(Number(detail.line) || 1, view.state.doc.lines)));
@@ -640,7 +737,7 @@ function handleRuntime({ type, detail }) {
       !detail.assets?.length
     ) {
       reloadFromError = false;
-      log('Restarting the game after restoring the last working code.', 'info');
+      log('Restarting the project after restoring the last working code.', 'info');
       play();
     }
     if (view) view.dispatch(setDiagnostics(view.state, []));
@@ -665,42 +762,6 @@ $('#hot-reload').addEventListener('change', () => {
   remember();
   queueChanges();
 });
-document.querySelectorAll('[data-control]').forEach((button) => {
-  let pressedAt = 0;
-  let releaseTimer;
-  const press = () => {
-    clearTimeout(releaseTimer);
-    pressedAt = performance.now();
-    post('control', { action: button.dataset.control, down: true });
-  };
-  const release = () => {
-    clearTimeout(releaseTimer);
-    // A quick tap can queue both console commands before the next engine frame.
-    // Keep jump down briefly so the action map sees its rising edge.
-    const delay = button.dataset.control === 'jump' ? Math.max(0, 120 - (performance.now() - pressedAt)) : 0;
-    releaseTimer = setTimeout(() => post('control', { action: button.dataset.control, down: false }), delay);
-  };
-  button.addEventListener('pointerdown', (event) => {
-    if (runtimeState !== 'running') return;
-    event.preventDefault();
-    button.setPointerCapture(event.pointerId);
-    press();
-  });
-  button.addEventListener('pointerup', release);
-  button.addEventListener('pointercancel', release);
-  button.addEventListener('lostpointercapture', release);
-  button.addEventListener('keydown', (event) => {
-    if ([' ', 'Enter'].includes(event.key) && !event.repeat) {
-      event.preventDefault();
-      if (runtimeState === 'running') press();
-    }
-  });
-  button.addEventListener('keyup', release);
-  button.addEventListener('blur', release);
-});
-window.addEventListener('blur', () => {
-  for (const action of ['left', 'right', 'jump']) post('control', { action, down: false });
-});
 
 async function starter() {
   const response = await fetch('./starter.json');
@@ -715,7 +776,7 @@ async function starter() {
   );
   return new Project(files);
 }
-function replaceProject(next, path = 'source/player.lua') {
+function replaceProject(next, path = 'source/main.lua') {
   playGeneration++;
   bridge.destroy();
   runtime = undefined;
@@ -729,6 +790,9 @@ function replaceProject(next, path = 'source/player.lua') {
   selected = '';
   editorStates.clear();
   collapsed.clear();
+  for (const folder of project.folders) {
+    if (folder.includes('/')) collapsed.add(folder);
+  }
   setRuntimeState('stopped');
   $('#preview-cover').hidden = false;
   updateProjectName();
@@ -739,7 +803,7 @@ $('#reset-button').addEventListener('click', async () => {
   if (
     !(await ask(
       'Start again?',
-      'This replaces the current project with Skybound. Export a ZIP first to keep your work.',
+      'This replaces every file with the starter project. Export a ZIP first to keep your work.',
       null,
       'Load example',
     ))
@@ -754,7 +818,7 @@ $('#reset-button').addEventListener('click', async () => {
 });
 $('#export-button').addEventListener('click', async () => {
   if (busy) return;
-  busy = true;
+  setBusy(true);
   $('#export-button').disabled = true;
   try {
     await saveNow();
@@ -772,7 +836,7 @@ $('#export-button').addEventListener('click', async () => {
   } catch (error) {
     status(error.message);
   } finally {
-    busy = false;
+    setBusy(false);
     $('#export-button').disabled = false;
   }
 });
@@ -791,7 +855,7 @@ $('#choose-folder').addEventListener('click', () => {
 
 async function importFiles(items) {
   if (busy || !items.length) return;
-  busy = true;
+  setBusy(true);
   try {
     if (items.length === 1 && !items[0].folder && /\.zip$/i.test(items[0].path)) {
       if (items[0].file.size > limits.bytes) throw new Error('The ZIP exceeds 64 MiB.');
@@ -828,7 +892,7 @@ async function importFiles(items) {
       const folders = items
         .filter((item) => item.folder)
         .map(({ path }) => cleanPath((base ? base + '/' : '') + path));
-      const next = new Project([...project.files], [...project.folders]);
+      const next = project.fork();
       next.import(entries, folders);
       const overwrite = entries.filter(([path]) => project.files.has(path));
       if (
@@ -858,7 +922,7 @@ async function importFiles(items) {
     status(error.message);
     log(error.message, 'error');
   } finally {
-    busy = false;
+    setBusy(false);
   }
 }
 for (const id of ['#file-import', '#folder-import'])
@@ -976,17 +1040,17 @@ async function init() {
     if (saved) {
       project = new Project(saved.files, saved.folders);
       $('#hot-reload').checked = saved.hotReload !== false;
+      workspace.restore(saved.layout);
+      for (const folder of saved.collapsed || []) collapsed.add(folder);
       updateProjectName();
-      const path = project.files.has(saved.active) ? saved.active : project.files.keys().next().value;
+      const path =
+        saved.active === ''
+          ? null
+          : project.files.has(saved.active)
+            ? saved.active
+            : project.files.keys().next().value;
       if (path) openFile(path, false);
-      else {
-        renderTree();
-        $('#active-file').textContent = 'No file selected';
-        $('#language-label').textContent = '';
-        $('#code-editor').hidden = true;
-        $('#asset-preview').hidden = false;
-        $('#asset-preview').textContent = 'Create a file or import a project to begin.';
-      }
+      else closeFile(false);
       $('#save-status').textContent = 'Restored from this device';
     } else {
       replaceProject(await starter());

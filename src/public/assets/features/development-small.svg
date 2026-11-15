@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="92" viewBox="0 0 360 92" fill="none">
+  <path fill="#101622" d="M0 0h360v92H0z"/>
+  <g font-family="ui-monospace,monospace" font-size="11" fill="#8193b6"><text x="16" y="27">01</text><text x="133" y="27">02</text><text x="261" y="27">03</text></g>
+  <g font-family="system-ui,sans-serif" font-size="14" fill="#d0dcf3"><text x="16" y="56">Edit Lua</text><text x="133" y="56">Hot reload</text><text x="261" y="56">See it</text></g>
+  <path d="M16 74h77m40 0h86m42 0h83" stroke="#4c628f"/><path d="M95 51h24m-5-4 5 4-5 4m104-4h24m-5-4 5 4-5 4" stroke="#99afe2"/>
+</svg>

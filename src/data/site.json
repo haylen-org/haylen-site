@@ -1,8 +1,8 @@
 {
   "name": "Haylen Engine",
   "url": "https://haylenengine.com",
-  "description": "An open-source C++ and Lua engine for 2D games and apps.",
+  "description": "An open-source C++ and Lua engine for games and apps.",
   "repository": "https://github.com/haylen-org/haylen",
   "socialImage": "assets/og-cover.png",
-  "socialImageAlt": "Haylen Engine — Build 2D games and apps with C++, Lua and native plugins."
+  "socialImageAlt": "Haylen Engine — Build games and apps with C++, Lua and native plugins."
 }

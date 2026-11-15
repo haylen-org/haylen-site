@@ -145,6 +145,14 @@ async function main() {
   const samples = JSON.parse(await readText('src/data/samples.json'));
   validateSamples(samples);
   const layout = await readText('src/layout.html');
+  const header = await readText('src/partials/site-header.html');
+  const footer = await readText('src/partials/site-footer.html');
+  const renderLayout = (values) =>
+    replaceTokens(layout, {
+      ...values,
+      SITE_HEADER: values.PAGE === 'playground' ? '' : replaceTokens(header, values),
+      SITE_FOOTER: values.PAGE === 'playground' ? '' : replaceTokens(footer, values),
+    });
   const site = validateSite(
     JSON.parse(await readText('src/data/site.json')),
     await readFile(path.join(root, 'src/public/assets/og-cover.png')),
@@ -155,7 +163,7 @@ async function main() {
       'home',
       'index.html',
       'Haylen Engine — Open-source C++ and Lua games & apps',
-      'Build 2D games and apps with C++, Lua and native plugins. Haylen is an open-source engine for desktop, mobile, TV and the web.',
+      'Build games and apps with C++, Lua and native plugins. Haylen is an open-source engine for desktop, mobile, TV and the web.',
       '',
     ],
     [
@@ -176,8 +184,8 @@ async function main() {
   pages.push([
     'playground',
     'playground/index.html',
-    'Playground — Make a Lua game with Haylen',
-    'Edit Lua, build a 2D platform game and run it with Haylen in your browser. Keep your files locally, try hot reload and export your project.',
+    'Playground — Haylen browser IDE',
+    'Edit Lua projects, manage assets and run Haylen in your browser. Import and export project ZIPs, use hot reload and keep working offline.',
     '../',
   ]);
   await rm(dist, { force: true, recursive: true });
@@ -246,13 +254,13 @@ async function main() {
     const body = replaceTokens(await readText(`src/pages/${page}.html`), values);
     const destination = path.join(dist, filename);
     await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, replaceTokens(layout, { ...values, BODY: body }));
+    await writeFile(destination, renderLayout({ ...values, BODY: body }));
   }
   const errorBody =
     '<section class="container error-page"><p class="eyebrow">404</p><h1>Page not found.</h1><p>This address does not match a page on the Haylen website.</p><a class="button button-primary" href="/">Go to the home page</a></section>';
   await writeFile(
     path.join(dist, '404.html'),
-    replaceTokens(layout, {
+    renderLayout({
       ...tokens,
       CANONICAL: `${site.url}/404.html`,
       CANONICAL_LINK: '',

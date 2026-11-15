@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="400" viewBox="0 0 360 400" fill="none">
+  <rect x="72" y="16" width="216" height="53" rx="3" fill="#fff" stroke="#aeb9d0"/><text x="180" y="49" text-anchor="middle" font-family="system-ui,sans-serif" font-size="17" fill="#273859">Your Lua project</text>
+  <path d="M180 69v33m-5-6 5 6 5-6" stroke="#7a8fc2" stroke-width="1.5"/>
+  <rect x="45" y="105" width="270" height="51" rx="3" fill="#334fb1"/><text x="180" y="137" text-anchor="middle" font-family="system-ui,sans-serif" font-size="17" fill="#fff">Shared plugin API</text>
+  <path d="M180 156v28M91 209v-25h178v25" stroke="#7a8fc2" stroke-width="1.5"/>
+  <g fill="#fafbfe" stroke="#adb8d0"><rect x="18" y="212" width="146" height="70" rx="3"/><rect x="196" y="212" width="146" height="70" rx="3"/><rect x="18" y="322" width="146" height="70" rx="3"/><rect x="196" y="322" width="146" height="70" rx="3"/></g>
+  <path d="M180 184v118M91 319v-17h178v17" stroke="#7a8fc2" stroke-width="1.5"/>
+  <g text-anchor="middle" font-family="system-ui,sans-serif"><g font-size="16" fill="#283b60"><text x="91" y="239">Apple</text><text x="269" y="239">Android</text><text x="91" y="349">Web</text><text x="269" y="349">Shared</text></g><g font-size="13" fill="#5c6c8c"><text x="91" y="262">Swift / Obj-C</text><text x="269" y="262">Kotlin / Java</text><text x="91" y="372">JavaScript</text><text x="269" y="372">C++</text></g></g>
+</svg>

@@ -22,13 +22,6 @@ function command({ type, detail }) {
       api.resume();
       send('resumed');
     } else if (type === 'stop') api.stop();
-    else if (type === 'control' && ['left', 'right', 'jump'].includes(detail.action)) {
-      api
-        .console(
-          `lua require('haylen.input').setVirtualButton('${detail.action}', ${detail.down ? 'true' : 'false'})`,
-        )
-        .catch((error) => send('log', { line: error.message, level: 'warning' }));
-    }
   } catch (error) {
     send('error', { message: error.message });
   }
@@ -79,3 +72,6 @@ window.addEventListener('message', ({ source, origin, data, ports }) => {
 window.addEventListener('error', (event) => send('fatal', { message: event.message }));
 window.addEventListener('unhandledrejection', (event) => send('fatal', { message: String(event.reason) }));
 parent.postMessage({ haylenPlayground: token, type: 'ready' }, location.origin);
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') send('escape');
+});

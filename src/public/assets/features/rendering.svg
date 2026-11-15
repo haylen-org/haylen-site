@@ -1,1 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="260" viewBox="0 0 480 260"><defs><linearGradient id="accent" x1="0" x2="1" y2="1"><stop stop-color="#67dce9"/><stop offset="1" stop-color="#a28bff"/></linearGradient><radialGradient id="glow"><stop stop-color="#5268c2" stop-opacity=".25"/><stop offset="1" stop-color="#5268c2" stop-opacity="0"/></radialGradient><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" stroke="#8494c4" stroke-opacity=".07" fill="none"/></pattern></defs><path fill="#10151f" d="M0 0h480v260H0z"/><path fill="url(#grid)" d="M0 0h480v260H0z"/><ellipse cx="240" cy="138" rx="210" ry="140" fill="url(#glow)"/><g transform="translate(240 132)"><path d="m-145 45 145-74 145 74L0 120Z" fill="#152d42" stroke="#4b6b87"/><path d="m-145 15 145-74 145 74L0 90Z" fill="#1b3a50" fill-opacity=".9" stroke="#609cbb"/><path d="m-145-15 145-74 145 74L0 60Z" fill="#233956" fill-opacity=".95" stroke="#8c9fdf"/><path d="m-90-18 90-46 90 46L0 27Z" fill="#1c3547" stroke="#62c6d1"/><path d="m-51-4 30-53L22-19 51-42 88-17 0 27Z" fill="#73c7ca" fill-opacity=".6"/><circle cx="38" cy="-43" r="12" fill="#e9b891"/><path d="m-145-15 0 60M145-15v60M0 60v60" stroke="#889eda" stroke-dasharray="3 5" stroke-opacity=".5"/></g><g font-family="system-ui,sans-serif" font-size="10" fill="#93a7c1"><text x="45" y="39">LIGHT</text><text x="363" y="210">LAYERS</text></g><path d="M66 49v40l36 20M365 195l-30-15" fill="none" stroke="#6c89b7"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" fill="none">
+  <defs>
+    <radialGradient id="light"><stop stop-color="#ffb86e"/><stop offset=".45" stop-color="#ad6d62" stop-opacity=".55"/><stop offset="1" stop-color="#343254" stop-opacity="0"/></radialGradient>
+    <linearGradient id="frame" x1="422" y1="97" x2="592" y2="257" gradientUnits="userSpaceOnUse"><stop stop-color="#28335a"/><stop offset="1" stop-color="#111722"/></linearGradient>
+    <pattern id="transparent" width="16" height="16" patternUnits="userSpaceOnUse"><path fill="#161c29" d="M0 0h16v16H0z"/><path fill="#1c2332" d="M0 0h8v8H0zm8 8h8v8H8z"/></pattern>
+  </defs>
+  <path fill="#0f141e" d="M0 0h640v360H0z"/>
+  <g font-family="system-ui,sans-serif" font-size="14" fill="#b7c2da"><text x="30" y="59">01 / SPRITES</text><text x="234" y="59">02 / LIGHT</text><text x="438" y="59">03 / FRAME</text></g>
+  <rect x="28" y="82" width="176" height="184" rx="3" fill="url(#transparent)" stroke="#46526a"/>
+  <path d="M29 238h174" stroke="#4f5e7a"/>
+  <rect x="52" y="174" width="52" height="64" rx="3" fill="#584a91" stroke="#aa93f3" stroke-width="1.5"/>
+  <path d="M60 182h36v48H60z" stroke="#c4b1ff" stroke-opacity=".3"/>
+  <circle cx="146" cy="213" r="25" fill="#8e5438" stroke="#f2a46d" stroke-width="1.5"/>
+  <path d="M44 166h68v80H44zM114 180h64v66h-64z" stroke="#7188af" stroke-dasharray="3 4"/>
+  <rect x="232" y="82" width="176" height="184" rx="3" fill="#131722" stroke="#46526a"/>
+  <ellipse cx="320" cy="157" rx="87" ry="81" fill="url(#light)"/>
+  <circle cx="319" cy="126" r="8" fill="#ffd498"/>
+  <g stroke="#e4bc85" stroke-opacity=".5"><path d="M319 107v-8m0 54v-8m-19-19h-8m54 0h-8m-32-13-6-6m38 38-6-6m0-26 6-6m-38 38 6-6"/></g>
+  <path d="M262 234h116" stroke="#3c465c"/>
+  <rect x="436" y="82" width="176" height="184" rx="3" fill="url(#frame)" stroke="#7285b3"/>
+  <ellipse cx="524" cy="157" rx="87" ry="81" fill="url(#light)" opacity=".55"/>
+  <path d="M437 238h174" stroke="#69789a"/>
+  <rect x="460" y="174" width="52" height="64" rx="3" fill="#6b5bb1" stroke="#c6b2ff" stroke-width="1.5"/>
+  <path d="M468 182h36v48h-36z" stroke="#cabaff" stroke-opacity=".4"/>
+  <circle cx="554" cy="213" r="25" fill="#ca8251" stroke="#ffd091" stroke-width="1.5"/>
+  <circle cx="523" cy="126" r="5" fill="#ffd498"/>
+  <g fill="#d3b2ff"><circle cx="579" cy="145" r="2"/><circle cx="565" cy="158" r="1.5"/><circle cx="588" cy="177" r="2"/><circle cx="547" cy="165" r="1.5"/></g>
+  <path d="M213 170h10m-4-4 4 4-4 4m198-4h10m-4-4 4 4-4 4" stroke="#b5c3e3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 298h584" stroke="#2c3548"/>
+  <circle cx="35" cy="320" r="3" fill="#9eaeef"/>
+  <g fill="#8d9bb7" font-family="system-ui,sans-serif" font-size="13"><text x="49" y="324">Layers, light and particles in one scene.</text><text x="566" y="324">x / y</text></g>
+</svg>

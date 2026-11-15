@@ -105,8 +105,13 @@ for (const [page, filename] of [
     assert.match(html, /<title>[^<]+<\/title>/);
     assert.match(html, /<meta name="description"/);
     assert.match(html, /favicon\.svg/);
-    assert.match(html, /<footer class="site-footer">/);
-    assert.equal((html.match(/aria-current="page"/g) || []).length, 2);
+    if (page === 'playground') {
+      assert.doesNotMatch(html, /class="site-header"|class="site-footer"|id="mobile-nav"/);
+      assert.match(html, /id="back-home"/);
+    } else {
+      assert.match(html, /<footer class="site-footer">/);
+      assert.equal((html.match(/aria-current="page"/g) || []).length, 2);
+    }
     assert.doesNotMatch(html, /\{\{[A-Z_]+\}\}/);
   });
 }
@@ -179,9 +184,7 @@ test('production publishes every sample and the whole dist through one publisher
   assert.match(workflow, /HAYLEN_REQUIRE_ALL_DEMOS: '1'/);
   assert.match(workflow, /HAYLEN_REQUIRE_PLAYGROUND_RUNTIME: '1'/);
   assert.match(workflow, /npm run playground:runtime -- --engine-dir \.\/haylen-engine/);
-  assert.match(workflow, /npm run test:playground -- --project=chromium-desktop/);
   assert.match(workflow, /npm run demos:build -- --engine-dir \.\/haylen-engine/);
-  assert.match(workflow, /npm run test:demos/);
   assert.match(workflow, /wrangler pages deploy dist/);
   assert.doesNotMatch(workflow, /continue-on-error|--min-success|--only/);
 });

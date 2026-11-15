@@ -9,7 +9,7 @@ export function cleanPath(value) {
   const path = value.normalize('NFC');
   if (path.split('/').includes('__proto__')) throw new Error('That name is reserved.');
   if (!path || path.split('/').some((part) => !part || part === '.' || part === '..' || part.trim() !== part))
-    throw new Error('Use a relative path such as source/player.lua.');
+    throw new Error('Use a relative path such as source/main.lua.');
   return path;
 }
 
@@ -57,6 +57,14 @@ export class Project {
   has(path) {
     return this.files.has(path) || this.folders.has(path);
   }
+  fork() {
+    // Canonical file buffers are replaced on edits, never mutated in place.
+    // A candidate can share those buffers while validating an atomic import.
+    const candidate = new Project();
+    candidate.files = new Map(this.files);
+    candidate.folders = new Set(this.folders);
+    return candidate;
+  }
   add(path, folder = false) {
     path = cleanPath(path);
     if (this.has(path)) throw new Error('That name is already in use.');
@@ -70,11 +78,11 @@ export class Project {
     if (to.startsWith(from + '/')) throw new Error('A folder cannot be moved into itself.');
     const rename = (path) =>
       path === from || path.startsWith(from + '/') ? to + path.slice(from.length) : path;
-    const result = new Project(
-      [...this.files].map(([p, b]) => [rename(p), b]),
-      [...this.folders].map(rename),
-    );
-    this.files = result.files;
+    const files = [...this.files].map(([path, bytes]) => [rename(path), bytes]);
+    const result = new Project(files, [...this.folders].map(rename));
+    // Validate the entire move before committing it, but retain the canonical bytes.
+    // Copying every buffer would mark unchanged modules as edited and restart the app.
+    this.files = new Map(files);
     this.folders = result.folders;
   }
   remove(path) {
