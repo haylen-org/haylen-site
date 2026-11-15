@@ -10,12 +10,14 @@ local Shell = require('shell')
 local Style = require('style')
 
 local ComposeEdit = haylen.class('ComposeEdit', Page)
+ComposeEdit.composerScreen = true
 
 ComposeEdit.crops = {{id = 'full', text = 'Whole picture'}, {id = 'close', text = 'Close up'}}
 
 function ComposeEdit:enter()
     self:mountGui(ui.column{gap = 0, onCancel = Shell.back,
         Shell.header('Edit', {
+            ui.button{icon = Shell.icon('close'), variant = 'icon', accessibilityLabel = 'Close new post', onClick = Shell.closeCompose},
             ui.button{id = 'next', text = 'Next', variant = 'link', enabled = false, onClick = function()
                 Shell.open(require('screens.compose-share'))
             end},
@@ -23,8 +25,7 @@ function ComposeEdit:enter()
         ui.column{id = 'body', grow = 1, gap = 0},
     })
     scene.spawn(self, function()
-        Compose.prepare():await()
-        self:showPreview(true)
+        self:showPreview(Compose.prepare():await())
     end)
 end
 

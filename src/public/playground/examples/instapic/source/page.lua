@@ -16,7 +16,7 @@ end
 -- Mounts the tree of the screen. Every screen shares the focus with the GUIs of the app, so a remote reaches the notices and back.
 function Page:mountGui(tree, options)
     -- Detail screens keep the same rail or bottom bar as the current tab.
-    if not self.authScreen and tree.id ~= 'appFrame' then
+    if not self.authScreen and not self.composerScreen and tree.id ~= 'appFrame' then
         self.detailFrame = true
         tree.grow = 1
         tree.align = 'stretch'

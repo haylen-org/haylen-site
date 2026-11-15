@@ -22,6 +22,35 @@ Shell.backTransition = {duration = 0.24, effect = 'slideIn', direction = 'right'
 Shell.riseTransition = {duration = 0.3, effect = 'moveIn', direction = 'up', ease = 'cubicOut'}
 Shell.current = 'home'
 
+local function reserveNavigation()
+    if Shell.navigating or scene.transitioning() then
+        return false
+    end
+    Shell.navigating = true
+    return true
+end
+
+-- Stack changes start on the next update. Reserve them before another tap arrives.
+local function navigationOptions(transition, complete)
+    local options = {}
+    for key, value in pairs(transition or {}) do
+        options[key] = value
+    end
+    local previousComplete = options.onComplete
+    options.onComplete = function(done)
+        Shell.navigating = false
+        if complete then
+            complete(done)
+        end
+        if previousComplete then
+            previousComplete(done)
+        end
+        window.setBackLeavesApp(scene.size() <= 1 and not Shell.composerLevel
+            and (Shell.current == 'home' or Shell.current == 'login'))
+    end
+    return options
+end
+
 function Shell.icon(name)
     return 'icons/' .. name .. '.svg'
 end
@@ -44,42 +73,95 @@ end
 
 -- Shows a tab as the only screen, without a transition, the way native tab bars switch, or pushes the screen of a tab that opens over the others, such as a new post.
 function Shell.showTab(id, params)
+    if Shell.composerLevel then
+        return false
+    end
     for _, tab in ipairs(Shell.tabs) do
         if tab.id == id then
             if tab.push then
-                Shell.open(require(tab.screen), params, Shell.riseTransition)
-                return
+                if not reserveNavigation() then
+                    return false
+                end
+                Shell.composerLevel = scene.size()
+                window.setBackLeavesApp(false)
+                return scene.push(require(tab.screen)(params), navigationOptions(Shell.riseTransition, function(done)
+                    if not done then
+                        Shell.composerLevel = nil
+                    end
+                end))
+            end
+            if not reserveNavigation() then
+                return false
             end
             Shell.current = id
             if scene.size() > 1 then
                 scene.popToRoot()
             end
-            scene.replace(require(tab.screen)(params))
+            local change = scene.replace(require(tab.screen)(params), navigationOptions({duration = 0}))
             window.setBackLeavesApp(id == 'home')
-            return
+            return change
         end
     end
 end
 
 -- Pushes a screen over the current one with a slide, or with another transition.
 function Shell.open(Screen, params, transition)
+    if Shell.composerLevel and not Screen.composerScreen then
+        return false
+    end
+    if not reserveNavigation() then
+        return false
+    end
     window.setBackLeavesApp(false)
-    return scene.push(Screen(params), transition or Shell.pushTransition)
+    return scene.push(Screen(params), navigationOptions(transition or Shell.pushTransition))
 end
 
 -- Puts a screen in the place of the current one with the same slide, such as the next step of a new post.
 function Shell.replace(Screen, params)
-    return scene.replace(Screen(params), Shell.pushTransition)
+    if Shell.composerLevel and not Screen.composerScreen then
+        return false
+    end
+    if not reserveNavigation() then
+        return false
+    end
+    return scene.replace(Screen(params), navigationOptions(Shell.pushTransition))
+end
+
+-- Cancel every composer step, returning to the exact screen that opened it.
+function Shell.closeCompose()
+    local origin = Shell.composerLevel
+    if not origin or not reserveNavigation() then
+        return false
+    end
+    require('compose').endFlow()
+    return scene.popTo(origin, navigationOptions(Shell.backTransition, function(done)
+        if done then
+            Shell.composerLevel = nil
+        end
+    end))
+end
+
+-- Publishing leaves no composer scenes behind the destination feed.
+function Shell.finishCompose()
+    if not Shell.composerLevel or Shell.navigating or scene.transitioning() then
+        return false
+    end
+    require('compose').endFlow()
+    Shell.composerLevel = nil
+    return Shell.showTab('home')
 end
 
 -- Goes back one screen, or to the home tab from the root of another tab.
 function Shell.back()
+    if Shell.composerLevel and scene.size() <= Shell.composerLevel + 1 then
+        return Shell.closeCompose()
+    end
     if scene.size() > 1 then
-        scene.pop(scene.top().backTransition or Shell.backTransition)
-        if scene.size() == 2 then
-            window.setBackLeavesApp(Shell.current == 'home')
+        if not reserveNavigation() then
+            return false
         end
-    elseif Shell.current ~= 'home' then
+        return scene.pop(navigationOptions(scene.top().backTransition or Shell.backTransition))
+    elseif Shell.current ~= 'home' and Shell.current ~= 'login' then
         Shell.showTab('home')
     end
 end
@@ -234,17 +316,25 @@ end
 
 -- Authentication uses the same scene stack as the rest of the app.
 function Shell.showLogin()
+    if not reserveNavigation() then
+        return false
+    end
+    Shell.current = 'login'
     if scene.size() > 1 then
         scene.popToRoot()
     end
-    scene.replace(require('screens.login')())
+    local change = scene.replace(require('screens.login')(), navigationOptions({duration = 0}))
     window.setBackLeavesApp(true)
+    return change
 end
 
 function Shell.signOut()
+    if not Shell.showLogin() then
+        return false
+    end
     require('services.fake-api').signOut()
     require('session').close()
-    Shell.showLogin()
+    return true
 end
 
 

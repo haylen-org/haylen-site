@@ -9,6 +9,7 @@ local Shell = require('shell')
 local Style = require('style')
 
 local ComposePick = haylen.class('ComposePick', Page)
+ComposePick.composerScreen = true
 
 ComposePick.backTransition = {duration = 0.3, effect = 'push', direction = 'down', ease = 'cubicOut'}
 
@@ -19,7 +20,7 @@ function ComposePick:enter()
             ui.button{id = 'next', text = 'Next', variant = 'link', onClick = function()
                 self:next()
             end},
-        }, {close = true}),
+        }, {close = true, onBack = Shell.closeCompose}),
         ui.column{id = 'body', grow = 1, gap = 0},
     })
 end
