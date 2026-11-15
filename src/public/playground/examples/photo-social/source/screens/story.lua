@@ -12,6 +12,11 @@ local Social = require('data.social')
 local Style = require('style')
 
 local Story = haylen.class('Story', Page)
+Story.fullscreen = true
+
+function Story.routeKey(params)
+    return params.index
+end
 
 Story.duration = 5
 Story.tapTime = 0.3
@@ -84,7 +89,7 @@ function Story:frameHeight()
     local _, unit = ui.scale()
     local area = viewport.safeRect()
     local height = area.height / unit - Style.space.l * 2
-    local width = area.width / unit - Style.size.rail - 128 - Style.space.xl * 4
+    local width = area.width / unit - 128 - Style.space.xl * 4
     return math.floor(math.max(160, math.min(height, width * 16 / 9)))
 end
 

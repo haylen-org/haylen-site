@@ -14,6 +14,10 @@ local Profile = haylen.class('Profile', Page)
 
 Profile.sections = {{id = 'posts', text = 'Posts'}, {id = 'saved', text = 'Saved'}}
 
+function Profile.routeKey(params)
+    return params.person or 'me'
+end
+
 function Profile:enter()
     local person = Social.person(self.params.person or 'me')
     self.person = person
@@ -50,14 +54,11 @@ function Profile:enter()
         end,
     }
     local content = ui.column{grow = 1, gap = 0,
-        person.me and ui.column{id = 'topBar', gap = 0, ui.row{height = Style.size.header, padding = {0, space.m}, ui.label{text = person.handle, font = 'heading', grow = 1, wrap = false}, ui.button{text = 'Sign out', variant = 'link', onClick = Shell.signOut}}, ui.divider{}} or Shell.header(person.handle),
+        self.rootTab == 'profile' and ui.column{id = 'topBar', gap = 0, ui.row{height = Style.size.header, padding = {0, space.m}, ui.label{text = person.handle, font = 'heading', grow = 1, wrap = false}, ui.button{text = 'Sign out', variant = 'link', onClick = Shell.signOut}}, ui.divider{}} or Shell.header(person.handle),
         Shell.centered(980, ui.column{gap = 0, list}, 1),
         self:editDialog(),
     }
-    self:mountGui(person.me and Shell.frame('profile', content) or ui.column{gap = 0, onCancel = Shell.back, content})
-    if person.me then
-        Shell.followUnread(self)
-    end
+    self:mountGui(content)
     self.list = self.gui:collection('grid')
     events.on('socialChanged', function()
         self:showGrid()
@@ -68,8 +69,8 @@ function Profile:enter()
 end
 
 function Profile:layoutChanged(wide)
-    if self.person.me and self.gui:has('topBar') then
-        self.gui:set('topBar', {visible = not wide})
+    if self.rootTab == 'profile' and self.gui:has('topBar') then
+        self.gui:set('topBar', {visible = not self.chromeWide})
     end
 end
 

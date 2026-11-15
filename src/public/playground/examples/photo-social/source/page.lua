@@ -15,14 +15,18 @@ end
 
 -- Mounts the tree of the screen. Every screen shares the focus with the GUIs of the app, so a remote reaches the notices and back.
 function Page:mountGui(tree, options)
-    -- Detail screens keep the same rail or bottom bar as the current tab.
-    if not self.authScreen and not self.composerScreen and tree.id ~= 'appFrame' then
-        self.detailFrame = true
-        tree.grow = 1
-        tree.align = 'stretch'
-        tree = Shell.frame(Shell.current, tree)
-    end
-    self.gui = ui.mount(tree, {owner = self, sharedFocus = true, placement = options and options.placement})
+    local left, bottom = Shell.insets(self)
+    tree.grow = 1
+    tree.align = 'stretch'
+    tree.onCancel = tree.onCancel or Shell.back
+    -- Reserve the shared menu's area without mounting another menu in this scene.
+    self.gui = ui.mount(ui.row{gap = 0,
+        ui.spacer{id = 'shell-left-inset', width = left},
+        ui.column{grow = 1, gap = 0, align = 'stretch',
+            tree,
+            ui.spacer{id = 'shell-bottom-inset', height = bottom},
+        },
+    }, {owner = self, sharedFocus = true, placement = options and options.placement})
     self.wide, self.roomy = nil, nil
     Shell.adapt(self)
 end

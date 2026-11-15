@@ -1,5 +1,5 @@
 {
-  "default": "instapic",
+  "default": "photo-social",
   "projects": [
     {
       "id": "action-game",
@@ -10,11 +10,11 @@
       "preview": "content/art/forest.png"
     },
     {
-      "id": "instapic",
-      "name": "Instapic",
+      "id": "photo-social",
+      "name": "Photo Social",
       "category": "App",
       "description": "A photo-sharing app with a feed, stories, messages, profiles and editable Lua screens.",
-      "directory": "examples/instapic",
+      "directory": "examples/photo-social",
       "preview": "content/photos/coast.png"
     }
   ]

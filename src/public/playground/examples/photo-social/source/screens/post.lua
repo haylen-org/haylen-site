@@ -11,6 +11,10 @@ local Widgets = require('widgets')
 
 local Post = haylen.class('Post', Page)
 
+function Post.routeKey(params)
+    return params.post
+end
+
 Post.stage = {colors = {panel = '#FF0E0E12'}, metrics = {panelRadius = 0}}
 
 function Post:enter()

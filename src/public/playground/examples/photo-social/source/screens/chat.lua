@@ -12,6 +12,10 @@ local Widgets = require('widgets')
 
 local Chat = haylen.class('Chat', Page)
 
+function Chat.routeKey(params)
+    return params.conversation
+end
+
 -- The bubbles of the person take the accent of the theme, and those of the others the soft gray of the app.
 Chat.outgoing = {colors = {raised = 'accent', border = 'accent'}, metrics = {panelRadius = Style.radius.bubble}}
 Chat.incoming = {colors = {raised = Style.color.mist, border = Style.color.mist}, metrics = {panelRadius = Style.radius.bubble}}

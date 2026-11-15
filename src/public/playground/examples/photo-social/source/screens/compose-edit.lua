@@ -49,7 +49,7 @@ function ComposeEdit:layoutChanged(wide)
     }
     local body
     if wide then
-        preview.grow, preview.align = 1, 'center'
+        preview.grow, preview.align = 1, 'start'
         tools.width = 460
         tools.align = 'stretch'
         body = ui.row{grow = 1, gap = space.l, padding = space.l, align = 'stretch', preview, tools}

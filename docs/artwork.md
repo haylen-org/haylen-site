@@ -25,8 +25,8 @@ The hero is authored HTML, SVG and CSS. Its orbital paths, light trails and halo
 
 Capability descriptions follow the [Haylen README](https://github.com/haylen-org/haylen) and [plugin documentation](https://github.com/haylen-org/haylen/blob/main/docs/platform/plugins.md). Haylen supports 2D today; the website does not advertise future 3D work as a current capability.
 
-## Instapic app example
+## Photo Social app example
 
-Instapic adapts the native [Haylen Photo Social sample](https://github.com/haylen-org/haylen/tree/main/samples/apps/photo-social). Its original twelve cartoon pictures, illustrated avatars, SVG marks, icons, Poppins fonts and UI modules keep the upstream MIT notice and font license. The app uses native retained UI, recycled lists, rounded photo prints and blue/teal accents.
+Photo Social adapts the native [Haylen Photo Social sample](https://github.com/haylen-org/haylen/tree/main/samples/apps/photo-social). Its original twelve cartoon pictures, illustrated avatars, SVG marks, icons, Poppins fonts and UI modules keep the upstream MIT notice and font license. The app uses native retained UI, recycled lists, rounded photo prints and blue/teal accents.
 
 The additional `content/photos/coast.png`, `kyoto.png` and `alps.png` were created with the built-in imagegen tool by restyling the earlier generated landscapes. The edit prompt preserves each composition while replacing photographic textures with dark navy cartoon outlines, rounded shapes, vivid colors and soft two-tone cel shading, without pixel art, UI, text or logos. The scenes show an Amalfi coastal village, a Kyoto garden and an alpine lake. Final generated PNGs are copied unchanged into the project; the app creates display crops and filters through Haylen's native image APIs.

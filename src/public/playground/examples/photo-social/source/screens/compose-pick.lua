@@ -28,7 +28,7 @@ end
 function ComposePick:layoutChanged(wide)
     local space = Style.space
     local preview = ui.image{id = 'preview', image = Compose.look(), fit = 'cover', aspectRatio = 1, accessibilityLabel = 'The chosen picture'}
-    local grid = ui.collection{id = 'library', grow = 1, layout = 'grid', lanes = wide and 3 or 4, cellAspect = 1, gap = space.xxs, selection = 'single', selected = {Compose.photo}, rememberFocus = true,
+    local grid = ui.collection{id = 'library', grow = 1, scrollbar = false, layout = 'grid', lanes = wide and 3 or 4, cellAspect = 1, gap = space.xxs, selection = 'single', selected = {Compose.photo}, rememberFocus = true,
         types = {photo = {template = ui.stack{align = 'stretch',
             ui.image{part = 'photo', bind = {image = 'photo'}, image = Compose.look(), fit = 'cover', align = 'stretch'},
             ui.row{align = 'stretch', alignItems = 'start', padding = space.xs, ui.spacer{grow = 1}, ui.image{part = 'picked', bind = {visible = '$selected'}, image = 'images/picked.svg', width = 36, height = 36, visible = false, accessibilityHidden = true}},
@@ -39,10 +39,10 @@ function ComposePick:layoutChanged(wide)
     }
     local body
     if wide then
-        preview.grow, preview.align = 1, 'center'
+        preview.grow, preview.align = 1, 'start'
         body = ui.row{grow = 1, gap = space.l, padding = space.l, align = 'stretch',
             preview,
-            ui.column{width = 480, gap = space.s, ui.label{text = 'Your pictures', font = 'button', color = 'textMuted'}, grid},
+            ui.column{width = 480, gap = space.s, align = 'stretch', ui.label{text = 'Your pictures', font = 'button', color = 'textMuted'}, grid},
         }
     else
         preview.align = 'stretch'

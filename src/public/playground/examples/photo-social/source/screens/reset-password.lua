@@ -5,7 +5,7 @@ local Forms = require('widgets.forms')
 local Page = require('page')
 local Shell = require('shell')
 
-local ResetPassword = haylen.class('InstapicResetPassword', Page)
+local ResetPassword = haylen.class('PhotoSocialResetPassword', Page)
 
 function ResetPassword:enter()
     self.authScreen = true

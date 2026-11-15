@@ -6,7 +6,7 @@ local Page = require('page')
 local Session = require('session')
 local Shell = require('shell')
 
-local Signup = haylen.class('InstapicSignup', Page)
+local Signup = haylen.class('PhotoSocialSignup', Page)
 
 function Signup:enter()
     self.authScreen = true

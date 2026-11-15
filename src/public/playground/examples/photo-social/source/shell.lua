@@ -1,4 +1,5 @@
--- The frame of the app: the tabs, the navigation between screens, the notices and the layout that follows the width of the window. Phones show a bar of icons at the bottom, and wide windows show a rail with the wordmark and the names of the tabs on the left.
+-- The app owns its menus once. Screens change inside that shared frame.
+-- Phones use the bottom bar, while wide windows use the navigation rail.
 local events = require('haylen.events')
 local scene = require('haylen.scene')
 local ui = require('haylen.ui')
@@ -8,7 +9,7 @@ local window = require('haylen.window')
 local Style = require('style')
 
 local Shell = {}
-Shell.chrome = {colors = {panel = '#FFFFFFFF'}, metrics = {panelRadius = 0, borderWidth = 0}}
+Shell.chrome = {colors = {panel = '#FFFFFFFF'}, metrics = {panelRadius = 0, panelPadding = 0, borderWidth = 0}}
 
 Shell.tabs = {
     {id = 'home', text = 'Home', icon = 'home', screen = 'screens.home'},
@@ -51,6 +52,14 @@ local function navigationOptions(transition, complete)
     return options
 end
 
+local function makePage(Screen, params, rootTab)
+    local page = Screen(params)
+    page.rootTab = rootTab
+    page.navigationScreen = Screen
+    page.navigationKey = Screen.routeKey and Screen.routeKey(params or {}) or nil
+    return page
+end
+
 function Shell.icon(name)
     return 'icons/' .. name .. '.svg'
 end
@@ -64,6 +73,7 @@ end
 -- Mounts the notices, which stay above every screen, and shows the first tab.
 function Shell.start()
     Shell.notices = ui.mount(ui.toast{id = 'notice', position = 'top', duration = 2.5, indicator = 'icon'}, {layer = 10, sharedFocus = true})
+    Shell.mountChrome()
     Shell.showLogin()
 end
 
@@ -84,7 +94,7 @@ function Shell.showTab(id, params)
                 end
                 Shell.composerLevel = scene.size()
                 window.setBackLeavesApp(false)
-                return scene.push(require(tab.screen)(params), navigationOptions(Shell.riseTransition, function(done)
+                return scene.push(makePage(require(tab.screen), params), navigationOptions(Shell.riseTransition, function(done)
                     if not done then
                         Shell.composerLevel = nil
                     end
@@ -97,7 +107,7 @@ function Shell.showTab(id, params)
             if scene.size() > 1 then
                 scene.popToRoot()
             end
-            local change = scene.replace(require(tab.screen)(params), navigationOptions({duration = 0}))
+            local change = scene.replace(makePage(require(tab.screen), params, id), navigationOptions({duration = 0}))
             window.setBackLeavesApp(id == 'home')
             return change
         end
@@ -109,11 +119,22 @@ function Shell.open(Screen, params, transition)
     if Shell.composerLevel and not Screen.composerScreen then
         return false
     end
+    local key = Screen.routeKey and Screen.routeKey(params or {}) or nil
+    -- Revisit an existing post, person or conversation instead of stacking a cycle.
+    for level = scene.size(), 1, -1 do
+        local page = scene.at(level)
+        if page.navigationScreen == Screen and page.navigationKey == key then
+            if level == scene.size() or not reserveNavigation() then
+                return false
+            end
+            return scene.popTo(level, navigationOptions(Shell.backTransition))
+        end
+    end
     if not reserveNavigation() then
         return false
     end
     window.setBackLeavesApp(false)
-    return scene.push(Screen(params), navigationOptions(transition or Shell.pushTransition))
+    return scene.push(makePage(Screen, params), navigationOptions(transition or Shell.pushTransition))
 end
 
 -- Puts a screen in the place of the current one with the same slide, such as the next step of a new post.
@@ -124,7 +145,7 @@ function Shell.replace(Screen, params)
     if not reserveNavigation() then
         return false
     end
-    return scene.replace(Screen(params), navigationOptions(Shell.pushTransition))
+    return scene.replace(makePage(Screen, params), navigationOptions(Shell.pushTransition))
 end
 
 -- Cancel every composer step, returning to the exact screen that opened it.
@@ -166,24 +187,21 @@ function Shell.back()
     end
 end
 
--- Tells a screen when the window crosses the widths of the wide and roomy layouts, and shows the rail or the bar of a screen built with `Shell.frame`.
+-- Only the central view adapts. Shared navigation keeps its GUI and control state.
 function Shell.adapt(page)
-    local width = Shell.width()
-    local chromeWide = width >= Style.wideWidth
-    -- Detail layouts use the space left after the shared navigation rail.
-    local contentWidth = width - (page.detailFrame and chromeWide and Style.size.rail or 0)
-    local wide, roomy = contentWidth >= Style.wideWidth, contentWidth >= Style.roomyWidth
+    local left, bottom, _, chromeWide = Shell.insets(page)
+    local contentWidth = Shell.width() - left
+    local wide = page.rootTab and chromeWide or contentWidth >= Style.wideWidth
+    local roomy = contentWidth >= Style.roomyWidth - Style.size.rail
+    Shell.syncChrome(page)
     if page.wide == wide and page.roomy == roomy and page.chromeWide == chromeWide then
         return
     end
-    page.wide, page.roomy = wide, roomy
-    page.chromeWide = chromeWide
+    page.wide, page.roomy, page.chromeWide = wide, roomy, chromeWide
+    page.gui:set('shell-left-inset', {width = left})
+    page.gui:set('shell-bottom-inset', {height = bottom})
     if page.gui:has('authArt') then
         page.gui:set('authArt', {visible = wide})
-    end
-    if page.gui:has('rail') then
-        page.gui:set('rail', {visible = chromeWide})
-        page.gui:set('tabBar', {visible = not chromeWide})
     end
     if page.layoutChanged then
         page:layoutChanged(wide, roomy)
@@ -229,7 +247,7 @@ function Shell.tabButton(tab, current, placement)
         tooltip = not rail and tab.text or nil,
         style = {fonts = {button = {size = Style.type.body, bold = selected}}, metrics = {iconSize = iconSize, controlPaddingX = Style.space.m, contentSpacing = Style.space.m}},
         onClick = function()
-            if not selected or tab.push then
+            if Shell.current ~= tab.id or scene.size() > 1 or tab.push then
                 Shell.showTab(tab.id)
             end
         end,
@@ -250,48 +268,73 @@ function Shell.tabButton(tab, current, placement)
     }
 end
 
--- Shows the count of unread messages on the tab of the messages, and keeps it current while the page lives.
-function Shell.followUnread(page)
-    local function show()
-        local count = require('chats').unreadCount()
-        for _, placement in ipairs({'rail', 'bar'}) do
-            if page.gui:has(placement .. '-unread') then
-                page.gui:set(placement .. '-unread', {text = count, visible = count > 0})
-            end
-        end
+-- The app owns its navigation GUI once. Screens only own the central view.
+function Shell.updateUnread()
+    local count = require('chats').unreadCount()
+    for _, placement in ipairs({'rail', 'bar'}) do
+        Shell.chromeGui:set(placement .. '-unread', {text = count, visible = count > 0})
     end
-    events.on('chatChanged', show, {owner = page})
-    show()
 end
 
--- The wordmark: the logo and the name of the app.
 function Shell.wordmark(size)
     return ui.row{gap = Style.space.s,
         ui.image{image = 'images/logo.svg', width = size, height = size, accessibilityHidden = true},
-        ui.label{text = 'Instapic', font = 'title', wrap = false, style = Style.text('title', Style.type.heading)},
+        ui.label{text = 'Photo Social', font = 'title', wrap = false, style = Style.text('title', Style.type.heading)},
     }
 end
 
--- Wraps the content of a tab with the rail and the bar of icons.
-function Shell.frame(current, content, onCancel)
+function Shell.mountChrome()
     local space = Style.space
-    local rail = {width = Style.size.rail, gap = space.xs, padding = {space.xl, space.m, space.l, space.m}, align = 'stretch',
+    local rail = {grow = 1, gap = space.xs, padding = {space.xl, space.m, space.l, space.m}, align = 'stretch',
         ui.row{padding = {0, space.s, space.xl, space.s}, Shell.wordmark(52)},
     }
     local bar = {gap = 0, height = Style.size.tabBar, padding = {0, space.s}}
     for _, tab in ipairs(Shell.tabs) do
-        rail[#rail + 1] = Shell.tabButton(tab, current, 'rail')
-        bar[#bar + 1] = Shell.tabButton(tab, current, 'bar')
+        rail[#rail + 1] = Shell.tabButton(tab, Shell.current, 'rail')
+        bar[#bar + 1] = Shell.tabButton(tab, Shell.current, 'bar')
     end
     rail[#rail + 1] = ui.spacer{grow = 1}
     rail[#rail + 1] = ui.button{text = 'Sign out', variant = 'link', align = 'start', onClick = Shell.signOut}
-    return ui.row{id = 'appFrame', gap = 0, onCancel = onCancel or Shell.back,
-        ui.row{id = 'rail', visible = false, gap = 0, align = 'stretch', ui.panel{padding = 0, align = 'stretch', style = Shell.chrome, ui.column(rail)}, ui.divider{vertical = true, align = 'stretch'}},
+    Shell.chromeGui = ui.mount(ui.row{gap = 0, onCancel = Shell.back,
+        ui.panel{id = 'rail', width = Style.size.rail, visible = false, padding = 0, align = 'stretch', style = Shell.chrome, ui.column(rail)},
         ui.column{grow = 1, gap = 0, align = 'stretch',
-            content,
-            ui.panel{id = 'tabBar', padding = 0, gap = 0, style = Shell.chrome, ui.divider{}, ui.row(bar)},
+            ui.spacer{grow = 1},
+            ui.panel{id = 'tabBar', height = Style.size.tabBar, visible = false, padding = 0, gap = 0, style = Shell.chrome, ui.row(bar)},
         },
-    }
+    }, {owner = Shell, layer = 5, sharedFocus = true})
+    Shell.chromeGui.visible = false
+    events.on('chatChanged', Shell.updateUnread, {owner = Shell})
+    Shell.updateUnread()
+end
+
+function Shell.insets(page)
+    local shown = not page.authScreen and not page.composerScreen and not page.fullscreen
+    local wide = Shell.width() >= Style.wideWidth
+    return shown and wide and Style.size.rail or 0,
+        shown and not wide and Style.size.tabBar or 0, shown, wide
+end
+
+function Shell.syncChrome(page)
+    local _, _, shown, wide = Shell.insets(page)
+    local state = Shell.chromeState
+    if state and state.shown == shown and state.wide == wide and state.current == Shell.current then
+        return
+    end
+    Shell.chromeState = {shown = shown, wide = wide, current = Shell.current}
+    Shell.chromeGui.visible = shown
+    Shell.chromeGui:set('rail', {visible = wide})
+    Shell.chromeGui:set('tabBar', {visible = not wide})
+    for _, tab in ipairs(Shell.tabs) do
+        local selected = Shell.current == tab.id
+        for _, placement in ipairs({'rail', 'bar'}) do
+            local iconSize = tab.image and (placement == 'rail' and 32 or 48) or 32
+            Shell.chromeGui:set(placement .. '-' .. tab.id, {
+                icon = Shell.tabIcon(tab, selected),
+                style = {fonts = {button = {size = Style.type.body, bold = selected}},
+                    metrics = {iconSize = iconSize, controlPaddingX = Style.space.m, contentSpacing = Style.space.m}},
+            })
+        end
+    end
 end
 
 -- Centers a node in the width it gets, as wide as it may be up to `maxWidth`. A `grow` lets the row take the free height of a column.
@@ -323,7 +366,7 @@ function Shell.showLogin()
     if scene.size() > 1 then
         scene.popToRoot()
     end
-    local change = scene.replace(require('screens.login')(), navigationOptions({duration = 0}))
+    local change = scene.replace(makePage(require('screens.login'), nil, 'login'), navigationOptions({duration = 0}))
     window.setBackLeavesApp(true)
     return change
 end
@@ -336,6 +379,4 @@ function Shell.signOut()
     require('session').close()
     return true
 end
-
-
 return Shell

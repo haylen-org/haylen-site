@@ -1,4 +1,4 @@
--- Instapic: a made-up photo sharing app with a feed of posts with likes, comments and captions, stories that play full screen, profiles with a grid of pictures and a follow button, a new post with a picture, a crop, a filter and a caption, and direct messages, in a bright white look of rounded prints with a blue to teal ring and a blue accent.
+-- Photo Social: a made-up photo sharing app with a feed of posts with likes, comments and captions, stories that play full screen, profiles with a grid of pictures and a follow button, a new post with a picture, a crop, a filter and a caption, and direct messages, in a bright white look of rounded prints with a blue to teal ring and a blue accent.
 local input = require('haylen.input')
 local system = require('haylen.system')
 local ui = require('haylen.ui')

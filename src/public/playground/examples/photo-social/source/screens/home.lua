@@ -13,7 +13,7 @@ local Home = haylen.class('Home', Page)
 
 function Home:enter()
     local space = Style.space
-    self:mountGui(Shell.frame('home', ui.column{grow = 1, gap = 0,
+    self:mountGui(ui.column{grow = 1, gap = 0,
         ui.column{id = 'topBar', gap = 0,
             ui.row{height = Style.size.header, padding = {0, space.xs, 0, space.m}, Shell.wordmark(44), ui.spacer{grow = 1},
                 ui.button{id = 'explore', icon = Shell.icon('search'), iconColor = 'text', variant = 'icon', accessibilityLabel = 'Explore', tooltip = 'Explore', onClick = function()
@@ -24,8 +24,7 @@ function Home:enter()
         },
         ui.row{id = 'body', grow = 1, gap = 0, align = 'stretch'},
         Widgets.friendDialog(self),
-    }))
-    Shell.followUnread(self)
+    })
     events.on('socialChanged', function(changed)
         if self.feed and Social.post(changed.id) == changed then
             self.feed:setItems(Social.feed())
@@ -38,7 +37,7 @@ end
 
 function Home:layoutChanged(wide, roomy)
     local state = self.feed and self.feed:saveState()
-    self.gui:set('topBar', {visible = not wide})
+    self.gui:set('topBar', {visible = not self.chromeWide})
     self.gui:replaceChildren('body', {self:body(wide, roomy)})
     self.stories = self.gui:collection('stories')
     self.feed = self.gui:collection('feed')
@@ -62,7 +61,7 @@ function Home:body(wide, roomy)
             end,
         },
         ui.divider{},
-        ui.collection{id = 'feed', grow = 1, gap = wide and space.l or 0, padding = wide and {space.l, 0, space.xl, 0} or {0, 0, space.l, 0}, scrollbar = wide, rememberFocus = true,
+        ui.collection{id = 'feed', grow = 1, gap = wide and space.l or 0, padding = wide and {space.l, 0, space.xl, 0} or {0, 0, space.l, 0}, scrollbar = false, rememberFocus = true,
             types = {post = Widgets.post(wide), gallery = Widgets.post(wide, true)},
             onClick = function(event)
                 Widgets.onPostEvent(self, self.feed, event)
