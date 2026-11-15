@@ -1,0 +1,21 @@
+{
+  "default": "instapic",
+  "projects": [
+    {
+      "id": "action-game",
+      "name": "Action Game",
+      "category": "Game",
+      "description": "A fantasy platform game with editable Lua code and original artwork.",
+      "directory": "starter",
+      "preview": "content/art/forest.png"
+    },
+    {
+      "id": "instapic",
+      "name": "Instapic",
+      "category": "App",
+      "description": "A photo-sharing app with a feed, stories, messages, profiles and editable Lua screens.",
+      "directory": "examples/instapic",
+      "preview": "content/photos/coast.png"
+    }
+  ]
+}

@@ -83,13 +83,14 @@ body[data-page='playground'] #main {
   color: white;
 }
 .pg-button.pg-play {
-  background: var(--editor-action);
-  border-color: #6780ff;
+  background: #5c43dc;
+  border-color: #5c43dc;
+  box-shadow: none;
   color: white;
 }
 .pg-button.pg-play:hover:not(:disabled) {
-  background: #5673ff;
-  border-color: #8296ff;
+  background: #6a50e5;
+  border-color: #6a50e5;
 }
 .playground button:disabled {
   opacity: 0.4;
@@ -199,7 +200,6 @@ body[data-page='playground'] #main {
 }
 .pg-workspace[data-files='closed'] > .pg-files,
 .pg-workspace[data-code='closed'] > .pg-code,
-.pg-workspace[data-preview='closed'] > .pg-output,
 .pg-workspace[data-console='closed'] .pg-console-section {
   display: none;
 }
@@ -223,6 +223,16 @@ body[data-page='playground'] #main {
   display: flex;
   flex-direction: column;
   background: #10131b;
+}
+/* A hidden native UI still needs a valid canvas size while the editor is open. */
+.pg-workspace[data-preview='closed'] > .pg-output:not(.is-expanded) {
+  position: fixed;
+  top: -10000px;
+  left: 0;
+  width: 640px;
+  height: 420px;
+  visibility: hidden;
+  pointer-events: none;
 }
 .pg-panel-title,
 .pg-editor-top {
@@ -591,11 +601,54 @@ body[data-page='playground'] #main {
 .pg-preview {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: calc(100dvh - 225px);
-  flex-shrink: 0;
+  flex: 1;
   background: #080a0f;
   min-height: 0;
+}
+.pg-preview-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  box-shadow: 0 0 0 1px #2b3040;
+}
+.pg-device-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--editor-border);
+  background: var(--editor-panel);
+  flex-shrink: 0;
+}
+.pg-device-toolbar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--editor-muted);
+  font-size: 11px;
+}
+.pg-device-toolbar button:hover {
+  background: #252b3a;
+  color: var(--editor-text);
+}
+.pg-device-toolbar button[aria-pressed='true'] {
+  background: #2d2850;
+  border-color: #574980;
+  color: #d8ceff;
+}
+#viewport-size {
+  margin-left: auto;
+  font: 10px var(--font-mono);
+  color: var(--editor-muted);
+  white-space: nowrap;
 }
 .pg-preview iframe {
   position: absolute;
@@ -642,7 +695,8 @@ body[data-page='playground'] #main {
 .pg-console-section {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 0 0 160px;
+  max-height: 30%;
   min-height: 100px;
 }
 .pg-console-head {
@@ -770,6 +824,59 @@ body[data-page='playground'] #main {
   overflow: hidden;
   overscroll-behavior: contain;
 }
+.pg-examples {
+  width: min(760px, calc(100% - 32px));
+}
+.pg-example-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  margin-block: 20px;
+}
+.pg-example {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 0 0 20px;
+  border: 1px solid #444c63;
+  border-radius: 8px;
+  background: #111722;
+  color: #edf1fc;
+  text-align: left;
+  cursor: pointer;
+}
+.pg-example:hover,
+.pg-example:focus-visible {
+  border-color: #8a93ff;
+  background: #1b2233;
+}
+.pg-example img {
+  width: 100%;
+  height: 145px;
+  object-fit: cover;
+  margin-bottom: 18px;
+}
+.pg-example span {
+  margin-inline: 20px;
+}
+.pg-example-category {
+  color: #a5afff;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.pg-example-name {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.pg-example-description {
+  margin-top: 9px;
+  color: #b1bed6;
+  font-size: 13px;
+  line-height: 1.6;
+}
 .pg-dialog h2 {
   font-size: 25px;
   font-weight: 600;
@@ -862,7 +969,6 @@ body[data-page='playground'] #main {
     --code-track: 0px;
     --preview-track: minmax(0, 1fr);
   }
-  .pg-workspace[data-pane='code'] > .pg-output,
   .pg-workspace[data-pane='preview'] > .pg-code {
     display: none;
   }
@@ -946,8 +1052,7 @@ body[data-page='playground'] #main {
   }
   .pg-workspace[data-pane='code'] > .pg-files,
   .pg-workspace[data-pane='preview'] > .pg-files,
-  .pg-workspace[data-pane='files'] > .pg-code,
-  .pg-workspace[data-pane='files'] > .pg-output {
+  .pg-workspace[data-pane='files'] > .pg-code {
     display: none;
   }
   .pg-workspace[data-pane='files'] > .pg-files {
@@ -993,6 +1098,7 @@ body[data-page='playground'] #main {
   }
   .pg-file-tools button,
   .pg-view-tools button,
+  .pg-device-toolbar button,
   .pg-editor-top > button {
     min-width: 32px;
     min-height: 36px;

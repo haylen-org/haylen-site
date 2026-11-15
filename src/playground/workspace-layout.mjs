@@ -63,6 +63,7 @@ export class WorkspaceLayout {
   }
 
   visible(name) {
+    if (name === 'preview' && this.root.querySelector('.pg-output.is-expanded')) return true;
     if (name === 'console') return this.state.console && this.visible('preview');
     if (this.phone.matches) return this.state.pane === name;
     if (this.compact.matches && name !== 'files') {
@@ -75,6 +76,9 @@ export class WorkspaceLayout {
   render() {
     const effectivePane = !this.phone.matches && this.state.pane === 'files' ? 'code' : this.state.pane;
     this.root.dataset.pane = effectivePane;
+    const preview = this.root.querySelector('.pg-output');
+    preview.inert = !this.visible('preview');
+    preview.setAttribute('aria-hidden', String(!this.visible('preview')));
 
     for (const name of ['files', 'code', 'preview', 'console']) {
       const visible = name === 'console' ? this.state.console : this.visible(name);

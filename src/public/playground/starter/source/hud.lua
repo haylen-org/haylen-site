@@ -66,7 +66,7 @@ function Hud.draw(game)
     drawText('Find relics. Defeat the guardian.', 993, 76, 14, '#FFBBDBC6')
 
     graphics.drawRect({24, 665, 1231, 32}, '#DC17352D')
-    local controls = 'A D  MOVE    SPACE  DOUBLE JUMP    X / J  ATTACK    SHIFT  DASH'
+    local controls = 'A D  MOVE    SPACE  DOUBLE JUMP    X / J  ATTACK    K  DASH'
         .. '    C  HERO    R  RETRY    M  SOUND'
 
     if input.lastDevice() == 'gamepad' then

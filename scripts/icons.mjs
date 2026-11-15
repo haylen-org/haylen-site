@@ -27,6 +27,8 @@ const uiIcons = {
   GLOBE: 'globe',
   MONITOR: 'monitor',
   PHONE: 'smartphone',
+  TABLET: 'tablet',
+  ROTATE: 'rotate-cw-square',
   TV: 'tv',
   HEADSET: 'glasses',
   CHECK: 'check',

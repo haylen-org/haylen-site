@@ -76,8 +76,8 @@ function Game:reset()
 end
 
 function Game:enter()
-    print('Emberfall ready. A/D move. Space jumps. X/J or click attacks. Mouse or arrows aim.')
-    print('Shift dashes. 1/2/3 or C changes hero. R restarts. M toggles sound.')
+    print('Action Game ready. A/D move. Space jumps. X/J or click attacks. Mouse or arrows aim.')
+    print('K dashes. 1/2/3 or C changes hero. R restarts. M toggles sound.')
     print('Gamepad: left stick or D-pad moves. Right stick aims. Bottom button jumps.')
     print('Right trigger or left face button attacks. Right face button dashes. Top button changes hero.')
 end

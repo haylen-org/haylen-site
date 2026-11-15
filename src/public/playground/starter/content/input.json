@@ -19,7 +19,7 @@
     {
       "name": "dash",
       "type": "button",
-      "bindings": ["key:leftShift", "key:k", "virtual:dash", "button:east"]
+      "bindings": ["key:k", "virtual:dash", "button:east"]
     },
     {
       "name": "hero",

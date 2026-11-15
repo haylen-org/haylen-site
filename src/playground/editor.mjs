@@ -15,11 +15,16 @@ import { PlayerBridge } from './bridge.mjs';
 import { WorkspaceLayout } from './workspace-layout.mjs';
 import { Notifications } from './notifications.mjs';
 import { SearchPanel } from './search-panel.mjs';
+import { ExampleProjects } from './examples.mjs';
+import { PreviewViewport } from './preview-viewport.mjs';
 import './editor.css';
 
 const $ = (selector) => document.querySelector(selector);
 const runtimeAvailable = $('.playground').dataset.runtime === 'available';
 const notices = new Notifications();
+const examples = new ExampleProjects();
+new PreviewViewport();
+let exampleRequest = 0;
 const status = (text) => notices.show(text);
 let project = new Project();
 let active = '';
@@ -580,6 +585,7 @@ function expandPreview(expanded) {
   button.setAttribute('aria-pressed', String(expanded));
   for (const selector of ['.pg-heading', '.pg-toolbar', '.pg-activity', '.pg-files', '.pg-code'])
     $(selector).inert = expanded;
+  workspace.render();
   button.focus();
 }
 $('#expand-preview').addEventListener('click', () =>
@@ -622,7 +628,7 @@ async function play(fresh = false) {
     const bytes = await pack(project);
     if (generation !== playGeneration) return;
     if (matchMedia('(max-width: 1100px)').matches && focusAfterStart) workspace.show('preview');
-    runtime = bridge.start(bytes, $('#preview'));
+    runtime = bridge.start(bytes, $('#preview-screen'));
     if (focusAfterStart) runtime.focus();
     $('#preview-cover').hidden = true;
     clearTimeout(startupWatch);
@@ -677,6 +683,7 @@ function handleRuntime({ type, detail }) {
   if (type === 'started') {
     clearTimeout(startupWatch);
     booting = false;
+    if (['error', 'fatal'].includes(runtimeState)) return;
     setRuntimeState('running');
     log(`Running ${detail.name || 'your project'}.`, 'success');
     queueChanges();
@@ -763,19 +770,6 @@ $('#hot-reload').addEventListener('change', () => {
   queueChanges();
 });
 
-async function starter() {
-  const response = await fetch('./starter.json');
-  if (!response.ok) throw new Error('The example project could not load.');
-  const paths = await response.json();
-  const files = await Promise.all(
-    paths.map(async (path) => {
-      const result = await fetch('./starter/' + path);
-      if (!result.ok) throw new Error(`Could not load ${path}.`);
-      return [path, new Uint8Array(await result.arrayBuffer())];
-    }),
-  );
-  return new Project(files);
-}
 function replaceProject(next, path = 'source/main.lua') {
   playGeneration++;
   bridge.destroy();
@@ -799,23 +793,71 @@ function replaceProject(next, path = 'source/main.lua') {
   openFile(project.files.has(path) ? path : project.files.keys().next().value, false);
   remember();
 }
-$('#reset-button').addEventListener('click', async () => {
+async function chooseExample(example) {
+  $('#examples-dialog').close();
   if (
     !(await ask(
-      'Start again?',
-      'This replaces every file with the starter project. Export a ZIP first to keep your work.',
+      `Load ${example.name}?`,
+      'This replaces every current file. Export a ZIP first to keep your work.',
       null,
       'Load example',
     ))
   )
     return;
+  setBusy(true);
   try {
-    replaceProject(await starter());
-    status('Example loaded.');
+    const next = await examples.load(example.id);
+    replaceProject(next);
+    await saveNow();
+    status(`${example.name} loaded.`);
   } catch (error) {
     status(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+$('#reset-button').addEventListener('click', async () => {
+  if (busy) return;
+  const request = ++exampleRequest;
+  const dialog = $('#examples-dialog');
+  const list = $('#example-list');
+  list.replaceChildren();
+  $('#example-status').textContent = 'Loading examples…';
+  dialog.showModal();
+  try {
+    const catalog = await examples.catalog();
+    if (!dialog.open || request !== exampleRequest) return;
+    for (const example of catalog.projects) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pg-example';
+      button.setAttribute('aria-label', `Load ${example.name}`);
+      const image = document.createElement('img');
+      image.src = `./${example.directory}/${example.preview}`;
+      image.alt = '';
+      image.width = 420;
+      image.height = 210;
+      button.append(image);
+      for (const [className, value] of [
+        ['pg-example-category', example.category],
+        ['pg-example-name', example.name],
+        ['pg-example-description', example.description],
+      ]) {
+        const text = document.createElement('span');
+        text.className = className;
+        text.textContent = value;
+        button.append(text);
+      }
+      button.addEventListener('click', () => chooseExample(example));
+      list.append(button);
+    }
+    $('#example-status').textContent = '';
+  } catch (error) {
+    $('#example-status').textContent = error.message;
   }
 });
+$('#close-examples').addEventListener('click', () => $('#examples-dialog').close());
 $('#export-button').addEventListener('click', async () => {
   if (busy) return;
   setBusy(true);
@@ -1053,7 +1095,7 @@ async function init() {
       else closeFile(false);
       $('#save-status').textContent = 'Restored from this device';
     } else {
-      replaceProject(await starter());
+      replaceProject(await examples.load());
       await saveNow();
     }
     setRuntimeState('stopped');

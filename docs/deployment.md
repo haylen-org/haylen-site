@@ -7,6 +7,7 @@ The website is entirely static. Node.js 22 compiles its HTML and Tailwind CSS 4.
 ```sh
 npm install
 npm run build
+npx playwright install chromium firefox webkit
 npm test
 npm run preview
 ```
@@ -20,10 +21,8 @@ npm ci
 npm run demos:build -- --engine-dir ../haylen --jobs 3
 npm run playground:runtime -- --engine-dir ../haylen
 HAYLEN_REQUIRE_ALL_DEMOS=1 HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1 npm run build
-npm test
 npx playwright install chromium firefox webkit
-npm run test:browser
-npm run test:playground
+npm test
 ```
 
 The upstream compiler needs Python 3.15, CMake, Ninja and a C++20 toolchain. It installs its pinned Emscripten and other tools. Linux prerequisites are listed in the workflow. The site's runtime and tests use Node.js 22; there are no Python site scripts.
@@ -49,7 +48,8 @@ dist/
     editor.css
     runtime.html
     runtime-host.js
-    starter.json
+    examples.json
+    examples/
     starter/
     runtime/
     sw.js
@@ -91,7 +91,7 @@ Configure these values in the website's GitHub repository:
 | Variable or secret | `CLOUDFLARE_PAGES_PROJECT` | Exact name of the Direct Upload project; variable takes precedence. |
 | Optional variable  | `CLOUDFLARE_MAX_FILES`     | File-count allowance for the actual Pages plan; defaults to 20000.  |
 
-Push to `main` or run **Publish** manually. Pull requests run the basic website and editor checks without production uploads. Production validates configuration, checks out Haylen `main`, compiles every sample, stages the editable player, validates the complete static output and uploads **all of `dist/` once**. It does not run games or native browser tests. Publication requires `CLOUDFLARE_PAGES_PROJECT`; missing credentials, a failed build, missing artifacts or exceeded hosting limits stop the upload.
+Push to `main` or run **Publish** manually. Pull requests run the page-opening smoke checks without production uploads. Production validates configuration, checks out Haylen `main`, compiles every sample, stages the editable player, validates the complete static output and uploads **all of `dist/` once**. It does not run games or native browser tests. Publication requires `CLOUDFLARE_PAGES_PROJECT`; missing credentials, a failed build, missing artifacts or exceeded hosting limits stop the upload.
 
 The manifest records the checked-out engine commit in CI. `main` intentionally tracks the latest engine; upstream API changes can require maintenance. Compilation and static validation do not prove native startup or gameplay. Screenshots from the basic website/editor checks are retained as workflow artifacts.
 
@@ -109,7 +109,15 @@ The browser service worker caches only the playground and its runtime/shared ass
 
 The preview can recover ordinary Lua errors. It cannot reliably interrupt an infinite Lua/native loop on the engine's current single thread. C++ and native plugin compilation still use Haylen's normal toolchain.
 
-Run `npm run test:playground` for basic editor controls, file operations, local saves and ZIP imports/exports across the configured browser matrix. These tests do not press Play, load native samples or check gameplay. Results and screenshots stay in `.cache/playground-results/`.
+Run `npm run test:browser` for simple page-opening smoke checks. These do not execute games or app flows.
+
+## Playground examples
+
+The Examples menu loads complete editable projects from `src/data/playground-examples.json`. Instapic is the default for new workspaces; existing saved projects are restored unchanged. Action Game remains available as a separate game example. All examples use version `1.0.0`. Switching projects confirms replacement and preserves a chance to export the current files first. All example files are included in the offline cache.
+
+Preview controls offer Fit, smartphone (390 × 844), tablet (768 × 1024) and desktop (1280 × 800) viewports. The existing app frame resizes without restarting and scales to fit the editor. Rotate swaps the viewport width and height without restarting the app. Choosing a preset restores its default orientation. These controls do not emulate physical device hardware. Hiding the console gives its space to the preview. Action Game uses K for dash and J for attacks, with controller and touch bindings kept in its project input file.
+
+Instapic adapts Haylen’s native Photo Social sample with cartoon artwork, illustrated avatars, stories, posts, comments, profile grids, messages and a three-step composer with crops and filters. Login and account creation use delayed local handlers in `source/services/fake-api.lua`. Social records live in `source/data/social.lua`; conversations live in `source/chats.lua`. Demo credentials are `alex@example.com` / `explore123`. Everything stays in memory during the running app session; no API server or real account is involved.
 
 ## Search and social previews
 

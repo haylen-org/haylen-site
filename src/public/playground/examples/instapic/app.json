@@ -1,0 +1,24 @@
+{
+  "name": "Instapic",
+  "identifier": "com.haylen.playground.instapic",
+  "version": "1.0.0",
+  "orientation": "any",
+  "window": {
+    "title": "Instapic",
+    "width": 1280,
+    "height": 820,
+    "resizable": true
+  },
+  "design": {
+    "width": 1280,
+    "height": 820,
+    "scaling": "none"
+  },
+  "ui": {
+    "scaleMode": "physical"
+  },
+  "lifecycle": {
+    "pauseOnFocusLoss": false
+  },
+  "clearColor": "#FFFAF8F5"
+}

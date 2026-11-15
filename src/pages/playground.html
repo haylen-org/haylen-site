@@ -25,8 +25,8 @@
     <div class="pg-project-actions">
       <button class="pg-button" id="import-button">{{ICON_UPLOAD}}<span>Import</span></button>
       <button class="pg-button" id="export-button">{{ICON_DOWNLOAD}}<span>Export ZIP</span></button>
-      <button class="pg-button" id="reset-button" aria-label="Load the example project">
-        {{ICON_REFRESH}}<span>Example</span>
+      <button class="pg-button" id="reset-button" aria-label="Choose an example project">
+        {{ICON_BOXES}}<span>Examples</span>
       </button>
     </div>
     <input type="file" id="file-import" multiple hidden />
@@ -128,12 +128,57 @@
             </button></span
           >
         </div>
+        <div class="pg-device-toolbar" role="group" aria-label="Preview viewport">
+          <button
+            data-device="fit"
+            aria-label="Fit preview to panel"
+            aria-pressed="true"
+            title="Fit to panel"
+          >
+            Fit
+          </button>
+          <button
+            data-device="phone"
+            aria-label="Smartphone viewport, 390 by 844"
+            aria-pressed="false"
+            title="Smartphone · 390 × 844"
+          >
+            {{ICON_PHONE}}
+          </button>
+          <button
+            data-device="tablet"
+            aria-label="Tablet viewport, 768 by 1024"
+            aria-pressed="false"
+            title="Tablet · 768 × 1024"
+          >
+            {{ICON_TABLET}}
+          </button>
+          <button
+            data-device="desktop"
+            aria-label="Desktop viewport, 1280 by 800"
+            aria-pressed="false"
+            title="Desktop · 1280 × 800"
+          >
+            {{ICON_MONITOR}}
+          </button>
+          <button
+            id="rotate-preview"
+            aria-label="Rotate viewport"
+            aria-pressed="false"
+            title="Swap viewport width and height"
+          >
+            {{ICON_ROTATE}}
+          </button>
+          <span id="viewport-size" aria-live="polite"></span>
+        </div>
         <div class="pg-preview" id="preview">
-          <div class="pg-preview-cover" id="preview-cover">
-            <img src="../favicon.svg" alt="" width="44" height="52" />
-            <h2>Run your project.</h2>
-            <p>The preview runs the files in your workspace.</p>
-            <button class="pg-button pg-play" id="preview-play">{{ICON_PLAY}}Start preview</button>
+          <div class="pg-preview-screen" id="preview-screen">
+            <div class="pg-preview-cover" id="preview-cover">
+              <img src="../favicon.svg" alt="" width="44" height="52" />
+              <h2>Run your project.</h2>
+              <p>The preview runs the files in your workspace.</p>
+              <button class="pg-button pg-play" id="preview-play">{{ICON_PLAY}}Start preview</button>
+            </div>
           </div>
         </div>
         <div class="pg-preview-meta"><span id="render-stats">Haylen · WebAssembly</span></div>
@@ -189,6 +234,21 @@
     </div>
   </form>
 </dialog>
+<dialog
+  class="pg-dialog pg-examples"
+  id="examples-dialog"
+  aria-labelledby="examples-title"
+  aria-describedby="examples-description"
+>
+  <h2 id="examples-title">Choose an example.</h2>
+  <p id="examples-description">
+    Open a complete project and make it your own. Loading an example replaces the current files after
+    confirmation.
+  </p>
+  <p id="example-status" role="status"></p>
+  <div id="example-list" class="pg-example-list"></div>
+  <div class="pg-dialog-actions"><button class="pg-button" id="close-examples" autofocus>Cancel</button></div>
+</dialog>
 <dialog class="pg-dialog pg-help" id="help-dialog" aria-labelledby="help-title">
   <p class="pg-kicker">HAYLEN PLAYGROUND</p>
   <h2 id="help-title">Your local workspace.</h2>
@@ -207,6 +267,11 @@
       error with a file location to open that line.
     </li>
     <li>
+      <strong>Check screen sizes.</strong> Use the smartphone, tablet and desktop buttons above the preview.
+      Each sets the app viewport to that size and scales it to fit. Rotate swaps its width and height. Fit
+      uses the available panel space. Hiding the console gives the preview more room.
+    </li>
+    <li>
       <strong>Apply changes.</strong> Hot reload applies supported Lua and asset edits while running.
       Initialization changes may restart the project. Correct a Lua error and use Play for a clean run.
     </li>
@@ -214,6 +279,10 @@
       <strong>Import a complete project.</strong> A project ZIP replaces the whole workspace after
       confirmation. Include the project settings and main Lua script, keeping the project's folder structure.
       Importing removes all previous files from the workspace.
+    </li>
+    <li>
+      <strong>Choose an example.</strong> Open Examples to load a game or app project. Export your current
+      work first if you want to keep it. Examples are available offline after the offline indicator is ready.
     </li>
     <li>
       <strong>Keep your work.</strong> Changes save in this browser. Export ZIP creates a portable backup.

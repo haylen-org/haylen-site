@@ -1,4 +1,4 @@
--- Emberfall is an editable platform game using Haylen's public Lua APIs.
+-- Action Game is an editable platform game using Haylen's public Lua APIs.
 -- The scene connects the focused movement, combat, physics and rendering modules.
 local assets = require('haylen.assets')
 local input = require('haylen.input')

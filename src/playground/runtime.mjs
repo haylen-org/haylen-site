@@ -2,6 +2,24 @@
 const token = location.hash.slice(1);
 let port;
 const send = (type, detail = {}) => port?.postMessage({ type, detail });
+const textActionDismissed = 3;
+
+// Dismiss editing before SDL queues the pointer press. A later blur would cancel
+// the newly pressed control and make the first click outside a field disappear.
+document.querySelector('canvas').addEventListener(
+  'pointerdown',
+  () => {
+    const module = window.Module;
+    const input = module?.haylen?.textInput;
+    if (!input?.field?.id) return;
+    const field = input.field.id;
+    input.active?.blur();
+    module._haylen_web_text_action(field, textActionDismissed);
+    input.finish();
+    module.canvas.focus({ preventScroll: true });
+  },
+  { capture: true },
+);
 
 function command({ type, detail }) {
   try {
@@ -69,7 +87,18 @@ window.addEventListener('message', ({ source, origin, data, ports }) => {
     send('fatal', { message: 'The Haylen player could not load. Reconnect once to prepare offline use.' });
   document.head.append(script);
 });
-window.addEventListener('error', (event) => send('fatal', { message: event.message }));
+window.addEventListener('error', (event) => {
+  // Browser resize delivery can defer a notification without stopping the app.
+  if (
+    !event.error &&
+    [
+      'ResizeObserver loop completed with undelivered notifications.',
+      'ResizeObserver loop limit exceeded',
+    ].includes(event.message)
+  )
+    return;
+  send('fatal', { message: event.message });
+});
 window.addEventListener('unhandledrejection', (event) => send('fatal', { message: String(event.reason) }));
 parent.postMessage({ haylenPlayground: token, type: 'ready' }, location.origin);
 window.addEventListener('keydown', (event) => {

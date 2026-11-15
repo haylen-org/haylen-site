@@ -41,11 +41,24 @@ export async function buildPlayground(root, dist) {
     legalComments: 'external',
     metafile: true,
   });
-  const starter = path.join(root, 'src/public/playground/starter');
-  const files = [];
-  for await (const file of filesUnder(starter))
-    files.push(path.relative(starter, file).split(path.sep).join('/'));
-  await writeFile(path.join(dist, 'playground/starter.json'), JSON.stringify(files.sort()) + '\n');
+  const examples = JSON.parse(await readFile(path.join(root, 'src/data/playground-examples.json'), 'utf8'));
+  const ids = new Set();
+  for (const example of examples.projects) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(example.id) || ids.has(example.id))
+      throw new Error('Invalid or duplicate playground example ID.');
+    if (!/^(?:starter|examples\/[a-z0-9-]+)$/.test(example.directory))
+      throw new Error('Invalid playground example directory.');
+    ids.add(example.id);
+    const source = path.join(root, 'src/public/playground', example.directory);
+    const files = [];
+    for await (const file of filesUnder(source))
+      files.push(path.relative(source, file).split(path.sep).join('/'));
+    for (const required of ['app.json', 'source/main.lua', example.preview])
+      if (!files.includes(required)) throw new Error(`Example ${example.id} is missing ${required}.`);
+    example.files = files.sort();
+  }
+  if (!ids.has(examples.default)) throw new Error('Missing default playground example.');
+  await writeFile(path.join(dist, 'playground/examples.json'), JSON.stringify(examples) + '\n');
   // Keep MIT notices with the static bundle, including transitive editor packages.
   const packages = [
     ...new Set(
