@@ -135,6 +135,7 @@ self.addEventListener('activate', event => event.waitUntil((async () => {
   await self.clients.claim();
 })()));
 self.addEventListener('message', event => {
+  if (event.data?.type === 'activate-update') event.waitUntil(self.skipWaiting());
   if (event.data?.type === 'status') event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     const complete = (await Promise.all(ASSETS.map(url => cache.match(url)))).every(Boolean);
@@ -146,8 +147,14 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || url.origin !== self.location.origin || !ASSETS.includes(url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const response = await cache.match(url.pathname);
-    return response || fetch(event.request);
+    const saved = await cache.match(url.pathname);
+    try {
+      const response = await fetch(new Request(event.request, {cache: 'no-cache'}));
+      return response.status < 500 || !saved ? response : saved;
+    } catch (error) {
+      if (saved) return saved;
+      throw error;
+    }
   })());
 });
 `,

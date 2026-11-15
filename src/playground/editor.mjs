@@ -17,6 +17,7 @@ import { Notifications } from './notifications.mjs';
 import { SearchPanel } from './search-panel.mjs';
 import { ExampleProjects } from './examples.mjs';
 import { PreviewViewport } from './preview-viewport.mjs';
+import { OfflineCache } from './offline-cache.mjs';
 import './editor.css';
 
 const $ = (selector) => document.querySelector(selector);
@@ -1035,41 +1036,28 @@ window.addEventListener('dragover', (event) => {
 });
 window.addEventListener('drop', (event) => event.preventDefault());
 
-async function offline() {
-  if (!('serviceWorker' in navigator)) {
-    $('#offline-status').textContent = 'Offline cache unavailable';
-    return;
-  }
-  try {
-    const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-    const report = async () => {
-      const worker = registration.active;
-      if (!worker) return;
-      const channel = new MessageChannel();
-      channel.port1.onmessage = ({ data }) => {
-        $('#offline-status').textContent = data.ready ? 'Ready offline' : 'Offline cache incomplete';
-        channel.port1.close();
-      };
-      worker.postMessage({ type: 'status' }, [channel.port2]);
-    };
-    const watch = () => {
-      registration.installing?.addEventListener('statechange', (event) => {
-        if (event.target.state === 'activated') report();
-        if (event.target.state === 'installed' && registration.waiting)
-          $('#offline-status').textContent = 'Update ready — reopen this page';
-        if (event.target.state === 'redundant')
-          $('#offline-status').textContent = 'Offline cache failed — reconnect and reload';
-      });
-    };
-    watch();
-    registration.addEventListener('updatefound', watch);
-    await navigator.serviceWorker.ready;
-    await report();
-    if (registration.waiting) $('#offline-status').textContent = 'Update ready — reopen this page';
-  } catch {
-    $('#offline-status').textContent = 'Offline cache unavailable';
-  }
-}
+const offline = new OfflineCache({
+  notify: status,
+  beforeUpdate: async () => {
+    await saveNow();
+    if (!db || savedRevision !== saveRevision) return false;
+    bridge.destroy();
+    allowLeave = true;
+    return true;
+  },
+});
+
+const buildTime = $('#build-time');
+buildTime.title = `Built ${buildTime.dateTime} · displayed in your local time`;
+buildTime.textContent = new Date(buildTime.dateTime).toLocaleString(undefined, {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
 async function init() {
   try {
     let saved;
@@ -1105,7 +1093,7 @@ async function init() {
       status(
         'The editor is ready. This preview build does not include the Haylen WebAssembly player. You can edit and export projects.',
       );
-    } else offline();
+    } else offline.start();
   } catch (error) {
     status(error.message);
     log(error.message, 'error');

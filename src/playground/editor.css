@@ -782,26 +782,70 @@ body[data-page='playground'] #main {
   position: fixed;
   inset: auto 16px 16px auto;
   margin: 0;
-  max-width: min(480px, calc(100% - 32px));
+  width: fit-content;
+  height: fit-content;
+  max-width: min(400px, calc(100% - 32px));
   display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 14px 16px;
-  border: 1px solid #6476af;
-  border-inline-start: 3px solid #8ca1ff;
-  border-radius: 5px;
-  background: #202739;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid #3e4762;
+  border-inline-start: 3px solid #929cff;
+  border-radius: 8px;
+  background: #1b2030;
   color: #e0e7ff;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.45;
   box-shadow: 0 8px 30px #0006;
   z-index: 40;
 }
+.pg-notice #notice-message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .pg-notice button {
-  min-width: 26px;
-  min-height: 26px;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
   display: grid;
   place-items: center;
+  padding: 0;
+  border-radius: 5px;
+  color: #a9b3cb;
+}
+.pg-notice button:hover {
+  background: #2c3348;
+  color: #fff;
+}
+.pg-notice .icon {
+  width: 16px;
+  height: 16px;
+}
+.pg-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--editor-border);
+  background: #11131c;
+  color: var(--editor-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.pg-build button {
+  color: #b8baff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.pg-build button:hover {
+  color: #fff;
+}
+.pg-build button:disabled {
+  cursor: wait;
 }
 .pg-dialog {
   position: fixed;

@@ -10,7 +10,7 @@
 
 /web-demos/manifest.json
   Cache-Control: no-cache
-/playground/sw.js
+/playground/*
   Cache-Control: no-cache
 /playground/runtime.html
   X-Robots-Tag: noindex, follow

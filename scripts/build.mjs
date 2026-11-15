@@ -225,6 +225,7 @@ async function main() {
     ...icons,
     PAGE_ASSETS: '',
     PLAYGROUND_RUNTIME: playgroundAvailable ? 'available' : 'unavailable',
+    BUILD_TIME_ISO: new Date().toISOString(),
     SAMPLE_COUNT: samples.length,
     PUBLISHED_COUNT: published,
     CATEGORY_FILTERS: filters,
@@ -236,6 +237,7 @@ async function main() {
     SOCIAL_IMAGE_WIDTH: site.imageWidth,
     SOCIAL_IMAGE_HEIGHT: site.imageHeight,
   };
+  tokens.BUILD_TIME_UTC = tokens.BUILD_TIME_ISO.replace('T', ' ').replace(/\.[0-9]+Z$/, ' UTC');
   for (const [page, filename, title, description, prefix] of pages) {
     const values = {
       ...tokens,
