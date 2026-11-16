@@ -114,7 +114,7 @@ function saveNow() {
   saving = saving
     .catch(() => {})
     .then(async () => {
-      if (!db) throw new Error('Local storage is unavailable. Export a ZIP to keep your work.');
+      if (!db) throw new Error('Your browser could not save this project. Use Export ZIP to keep a copy.');
       await storage(db, 'save', snapshot);
       savedRevision = revision;
       if (revision === saveRevision) {
@@ -123,7 +123,7 @@ function saveNow() {
       }
     })
     .catch((error) => {
-      $('#save-status').textContent = 'Not saved — export a backup';
+      $('#save-status').textContent = 'Could not save — export ZIP';
       status(error.message);
     });
   return saving;
@@ -188,7 +188,7 @@ function makeState(path) {
           encoder.encode(transaction.newDoc.toString()).length <= 1024 * 1024
         )
           return true;
-        status('Text editing is limited to 1 MiB per file. Import larger files as assets.');
+        status('This file is too large to edit here. Choose a text file smaller than 1 MB.');
         return false;
       }),
       EditorView.contentAttributes.of({ 'aria-label': `Code for ${path}`, spellcheck: 'false' }),
@@ -300,7 +300,7 @@ function openFile(path, switchPane = true) {
       preview.append(image);
     }
     const label = document.createElement('p');
-    label.textContent = isText(path) ? 'This file is too large for the editor (1 MiB limit).' : path;
+    label.textContent = isText(path) ? 'This file is too large to edit here (1 MB limit).' : path;
     preview.append(label);
     const download = document.createElement('a');
     download.href = assetUrl;
@@ -475,7 +475,7 @@ async function addItem(folder) {
   const base = selectedFolder();
   const name = await ask(
     folder ? 'New folder' : 'New file',
-    'Enter a path relative to the project root.',
+    'Enter a name. To put it in a folder, use a name such as source/player.lua.',
     (base ? base + '/' : '') + (folder ? 'new-folder' : 'untitled.lua'),
     'Save',
     (value) => project.fork().add(value, folder),
@@ -499,7 +499,7 @@ async function rename() {
   if (!project.has(from)) return;
   const requested = await ask(
     'Rename or move',
-    'Change the name or enter a new folder path. References inside code are not changed.',
+    'Change the name or folder. If your code uses the old name, update it there too.',
     from,
     'Save',
     (value) => {
@@ -565,7 +565,7 @@ function setRuntimeState(state) {
     loading: 'Starting…',
     running: 'Running',
     paused: 'Paused',
-    error: 'Lua error',
+    error: 'Check your code',
     fatal: 'Restart needed',
   }[state];
   $('#play').disabled = !runtimeAvailable || state === 'loading' || busy;
@@ -602,7 +602,9 @@ document.addEventListener('keydown', (event) => {
 });
 function validateProject() {
   if (!project.files.has('app.json') || !project.files.has('source/main.lua'))
-    throw new Error('The project needs app.json and source/main.lua.');
+    throw new Error(
+      'Check your project files: place app.json at the top level and main.lua inside the source folder.',
+    );
   JSON.parse(project.text('app.json'));
 }
 async function play(fresh = false) {
@@ -676,7 +678,7 @@ function applyChanges() {
   post('changes', { files, removed });
   reloadWatch = setTimeout(() => {
     awaitingReload = false;
-    log('No reload report yet. Use Play to restart if this change needs a fresh run.', 'warning');
+    log('Your changes have not appeared yet. Press Play to restart the preview.', 'warning');
   }, 6000);
 }
 function handleRuntime({ type, detail }) {
@@ -727,9 +729,7 @@ function handleRuntime({ type, detail }) {
     awaitingReload = false;
     clearTimeout(reloadWatch);
     log(
-      detail.restarted
-        ? `Restarting: ${detail.reason}`
-        : `Hot reload · ${detail.modules?.length || 0} modules · ${detail.assets?.length || 0} assets`,
+      detail.restarted ? 'Restarting the preview to apply your changes.' : 'Changes applied to the preview.',
       'success',
     );
     if (!detail.restarted && runtimeState === 'error' && detail.resumed) setRuntimeState('running');
@@ -799,7 +799,7 @@ async function chooseExample(example) {
   if (
     !(await ask(
       `Load ${example.name}?`,
-      'This replaces every current file. Export a ZIP first to keep your work.',
+      'This replaces all your current files. Use Export ZIP first to keep a copy.',
       null,
       'Load example',
     ))
@@ -875,7 +875,7 @@ $('#export-button').addEventListener('click', async () => {
         .replace(/[^a-z0-9-]/g, '-') || 'haylen-project') + '.zip';
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    status('Project exported. Keep the ZIP as your backup.');
+    status('Project downloaded. Keep the ZIP as a backup.');
   } catch (error) {
     status(error.message);
   } finally {
@@ -901,7 +901,8 @@ async function importFiles(items) {
   setBusy(true);
   try {
     if (items.length === 1 && !items[0].folder && /\.zip$/i.test(items[0].path)) {
-      if (items[0].file.size > limits.bytes) throw new Error('The ZIP exceeds 64 MiB.');
+      if (items[0].file.size > limits.bytes)
+        throw new Error('This ZIP is too large. Choose one smaller than 64 MB.');
       const next = await unpack(new Uint8Array(await items[0].file.arrayBuffer()));
       if (
         await ask(
@@ -912,17 +913,19 @@ async function importFiles(items) {
         )
       ) {
         replaceProject(next);
-        log('Project imported locally.', 'success');
+        log('Project opened.', 'success');
       }
     } else {
       const base = selectedFolder();
       let total = 0;
-      if (items.length > limits.files) throw new Error('Too many files.');
+      if (items.length > limits.files) throw new Error('Choose up to 1,000 files and folders at a time.');
       for (const { path, file, folder } of items) {
         cleanPath((base ? base + '/' : '') + path);
         if (folder) continue;
         if (file.size > limits.fileBytes || (total += file.size) > limits.bytes)
-          throw new Error(`Import exceeds the project limits: ${path}`);
+          throw new Error(
+            `Could not add ${path}. Each file can be up to 16 MB, and the whole project up to 64 MB.`,
+          );
       }
       const entries = await Promise.all(
         items
@@ -942,7 +945,7 @@ async function importFiles(items) {
         overwrite.length &&
         !(await ask(
           'Replace existing files?',
-          `${overwrite.length} files already exist in ${base || 'the project root'}. Their contents will be replaced.`,
+          `${overwrite.length} files already exist in ${base || 'the main folder'}. Their contents will be replaced.`,
           null,
           'Replace files',
         ))
@@ -958,8 +961,8 @@ async function importFiles(items) {
       updateProjectName();
       remember();
       queueChanges();
-      log(`Imported ${entries.length} files into ${base || 'the project root'}.`, 'success');
-      status('Files imported locally. Nothing was uploaded.');
+      log(`Imported ${entries.length} files into ${base || 'the main folder'}.`, 'success');
+      status('Files added to your project.');
     }
   } catch (error) {
     status(error.message);
@@ -989,12 +992,12 @@ async function readEntry(entry, prefix = '') {
   do {
     batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
     children.push(...batch);
-    if (children.length > limits.files) throw new Error('Too many dropped files.');
+    if (children.length > limits.files) throw new Error('Choose up to 1,000 files and folders at a time.');
   } while (batch.length);
   const result = [{ path: prefix + entry.name, folder: true }];
   for (const child of children) {
     result.push(...(await readEntry(child, prefix + entry.name + '/')));
-    if (result.length > limits.files) throw new Error('Too many dropped files.');
+    if (result.length > limits.files) throw new Error('Choose up to 1,000 files and folders at a time.');
   }
   return result;
 }
@@ -1048,7 +1051,7 @@ const offline = new OfflineCache({
 });
 
 const buildTime = $('#build-time');
-buildTime.title = `Built ${buildTime.dateTime} · displayed in your local time`;
+buildTime.title = `Built ${new Date(buildTime.dateTime).toUTCString()}. The date below uses your local time.`;
 buildTime.textContent = new Date(buildTime.dateTime).toLocaleString(undefined, {
   year: 'numeric',
   month: '2-digit',
@@ -1065,7 +1068,7 @@ async function init() {
       db = await openDatabase();
       saved = await storage(db, 'load');
     } catch {
-      status('Browser storage is unavailable. Export a ZIP to keep your work.');
+      status('Your browser could not save this project. Use Export ZIP to keep a copy.');
     }
     if (saved) {
       project = new Project(saved.files, saved.folders);
@@ -1081,7 +1084,7 @@ async function init() {
             : project.files.keys().next().value;
       if (path) openFile(path, false);
       else closeFile(false);
-      $('#save-status').textContent = 'Restored from this device';
+      $('#save-status').textContent = 'Saved project opened';
     } else {
       replaceProject(await examples.load());
       await saveNow();
@@ -1089,15 +1092,15 @@ async function init() {
     setRuntimeState('stopped');
     if (!runtimeAvailable) {
       $('#preview-play').disabled = true;
-      $('#offline-status').textContent = 'Player not included';
+      $('#offline-status').textContent = 'Preview unavailable';
       status(
-        'The editor is ready. This preview build does not include the Haylen WebAssembly player. You can edit and export projects.',
+        'You can edit files and download your project, but the preview is unavailable in this version of the playground.',
       );
     } else offline.start();
   } catch (error) {
     status(error.message);
     log(error.message, 'error');
-    $('#save-status').textContent = 'Workspace could not open';
+    $('#save-status').textContent = 'Could not open project';
   }
 }
 init();

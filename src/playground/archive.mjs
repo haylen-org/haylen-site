@@ -19,22 +19,29 @@ export function unpack(bytes) {
   const probe = new Unzip((file) => {
     const name = file.name.endsWith('/') ? file.name.slice(0, -1) : file.name;
     cleanPath(name);
-    if (names.has(file.name)) throw new Error('Duplicate ZIP entry.');
+    if (names.has(file.name))
+      throw new Error(
+        'This ZIP contains duplicate file names. Rename the duplicates and create the ZIP again.',
+      );
     names.add(file.name);
-    if (++count > limits.files) throw new Error('Too many files in the ZIP.');
-    if (file.originalSize > limits.fileBytes) throw new Error('A ZIP entry exceeds 16 MiB.');
+    if (++count > limits.files)
+      throw new Error('This ZIP contains more than 1,000 files and folders. Remove some and try again.');
+    if (file.originalSize > limits.fileBytes)
+      throw new Error('A file inside this ZIP is larger than 16 MB. Use smaller files and try again.');
     let size = 0;
     file.ondata = (error, chunk) => {
       if (error) throw error;
       size += chunk.length;
       total += chunk.length;
       if (size > limits.fileBytes || total > limits.bytes)
-        throw new Error('The ZIP exceeds the project size limits.');
+        throw new Error(
+          'This project is too large. Each file can be up to 16 MB, and the whole project up to 64 MB.',
+        );
     };
     file.start();
   });
   probe.register(UnzipInflate);
-  if (bytes.length > limits.bytes) throw new Error('The ZIP exceeds 64 MiB.');
+  if (bytes.length > limits.bytes) throw new Error('This ZIP is too large. Choose one smaller than 64 MB.');
   probe.push(bytes, true);
   let centralBytes = 0;
   const centralNames = new Set();
@@ -45,7 +52,9 @@ export function unpack(bytes) {
         filter: (file) => {
           cleanPath(file.name.endsWith('/') ? file.name.slice(0, -1) : file.name);
           if (centralNames.has(file.name) || !names.has(file.name))
-            throw new Error('The ZIP directory is inconsistent.');
+            throw new Error(
+              'Some files in this ZIP do not match its contents list. Create a new ZIP and try again.',
+            );
           centralNames.add(file.name);
           centralBytes += file.originalSize;
           if (
@@ -53,7 +62,9 @@ export function unpack(bytes) {
             file.originalSize > limits.fileBytes ||
             centralBytes > limits.bytes
           )
-            throw new Error('The ZIP directory exceeds project limits.');
+            throw new Error(
+              'This project is too large. Use up to 1,000 files and folders, 16 MB per file and 64 MB in total.',
+            );
           return true;
         },
       },
@@ -63,7 +74,8 @@ export function unpack(bytes) {
           return;
         }
         try {
-          if (centralNames.size !== names.size) throw new Error('The ZIP directory is incomplete.');
+          if (centralNames.size !== names.size)
+            throw new Error('This ZIP is incomplete. Create a new ZIP and try again.');
           const files = [];
           const folders = [];
           for (const [path, content] of Object.entries(entries)) {
@@ -72,7 +84,9 @@ export function unpack(bytes) {
           }
           const project = new Project(files, folders);
           if (!project.files.has('app.json') || !project.files.has('source/main.lua'))
-            throw new Error('The ZIP needs app.json and source/main.lua at its root.');
+            throw new Error(
+              'This ZIP needs app.json at the top level and main.lua inside a source folder. Do not wrap the project in an extra folder.',
+            );
           resolve(project);
         } catch (reason) {
           reject(reason);

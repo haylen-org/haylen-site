@@ -10,7 +10,7 @@ export class OfflineCache {
 
   async start() {
     if (!('serviceWorker' in navigator)) {
-      this.label.textContent = 'Offline cache unavailable';
+      this.label.textContent = 'Internet connection needed';
       return;
     }
     try {
@@ -23,7 +23,7 @@ export class OfflineCache {
           if (event.target.state === 'activated') this.report();
           if (event.target.state === 'installed') this.showUpdate();
           if (event.target.state === 'redundant')
-            this.label.textContent = 'Offline cache failed — reconnect and reload';
+            this.label.textContent = 'Reload online to enable offline use';
         });
       };
       watch();
@@ -32,7 +32,7 @@ export class OfflineCache {
       this.report();
       this.showUpdate();
     } catch {
-      this.label.textContent = 'Offline cache unavailable';
+      this.label.textContent = 'Internet connection needed';
     }
   }
 
@@ -41,7 +41,7 @@ export class OfflineCache {
     if (!worker) return;
     const channel = new MessageChannel();
     channel.port1.onmessage = ({ data }) => {
-      this.label.textContent = data.ready ? 'Ready offline' : 'Offline cache incomplete';
+      this.label.textContent = data.ready ? 'Available offline' : 'Reload online to enable offline use';
       channel.port1.close();
       this.showUpdate();
     };
@@ -51,7 +51,7 @@ export class OfflineCache {
   showUpdate() {
     if (!this.registration.waiting) return;
     this.button.hidden = false;
-    this.label.textContent = 'Update ready';
+    this.label.textContent = 'Update available in Help';
   }
 
   async update() {

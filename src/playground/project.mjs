@@ -5,11 +5,16 @@ export const decoder = new TextDecoder();
 
 export function cleanPath(value) {
   if (typeof value !== 'string' || value.length > 240 || /[\\\x00-\x1f\x7f:*?"<>|]/.test(value))
-    throw new Error('Use a relative path without special characters.');
+    throw new Error(
+      'Use a short name without special characters. Separate folder names with a forward slash (/).',
+    );
   const path = value.normalize('NFC');
-  if (path.split('/').includes('__proto__')) throw new Error('That name is reserved.');
+  if (path.split('/').includes('__proto__'))
+    throw new Error('Choose a different name. This name cannot be used.');
   if (!path || path.split('/').some((part) => !part || part === '.' || part === '..' || part.trim() !== part))
-    throw new Error('Use a relative path such as source/main.lua.');
+    throw new Error(
+      'Enter a file or folder name, such as source/player.lua. Avoid empty names, spaces at the ends, and dot-only folder names.',
+    );
   return path;
 }
 
@@ -26,10 +31,14 @@ export class Project {
     for (const folder of folders) dirs.add(cleanPath(folder));
     for (const [name, value] of files) {
       const path = cleanPath(name);
-      if (imported.has(path)) throw new Error(`Duplicate imported path: ${path}`);
+      if (imported.has(path))
+        throw new Error(
+          `Two imported files have the same name and folder: ${path}. Rename one and try again.`,
+        );
       imported.add(path);
       const bytes = typeof value === 'string' ? encoder.encode(value) : new Uint8Array(value);
-      if (bytes.byteLength > limits.fileBytes) throw new Error(`${path} exceeds the 16 MiB file limit.`);
+      if (bytes.byteLength > limits.fileBytes)
+        throw new Error(`${path} is too large. Each file can be up to 16 MB.`);
       next.set(path, bytes);
       const parts = path.split('/');
       parts.pop();
@@ -49,8 +58,10 @@ export class Project {
     if (next.size + dirs.size > limits.files)
       throw new Error('A project can contain up to 1,000 files and folders.');
     if ([...next.values()].reduce((sum, bytes) => sum + bytes.length, 0) > limits.bytes)
-      throw new Error('The project exceeds the 64 MiB limit.');
-    for (const dir of dirs) if (next.has(dir)) throw new Error(`${dir} is both a file and a folder.`);
+      throw new Error('This project is too large. Remove some files to bring it below 64 MB.');
+    for (const dir of dirs)
+      if (next.has(dir))
+        throw new Error(`A file and folder both use the name ${dir}. Rename one and try again.`);
     this.files = next;
     this.folders = dirs;
   }
@@ -67,14 +78,14 @@ export class Project {
   }
   add(path, folder = false) {
     path = cleanPath(path);
-    if (this.has(path)) throw new Error('That name is already in use.');
+    if (this.has(path)) throw new Error('That name is already in use. Choose another name.');
     this.import(folder ? [] : [[path, '']], folder ? [path] : []);
   }
   move(from, to) {
     to = cleanPath(to);
     if (!this.has(from)) throw new Error('The selected item no longer exists.');
     if (from === to) return;
-    if (this.has(to)) throw new Error('That destination already exists.');
+    if (this.has(to)) throw new Error('That name is already used in this folder. Choose another name.');
     if (to.startsWith(from + '/')) throw new Error('A folder cannot be moved into itself.');
     const rename = (path) =>
       path === from || path.startsWith(from + '/') ? to + path.slice(from.length) : path;

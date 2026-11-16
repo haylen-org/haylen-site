@@ -5,7 +5,7 @@
       <h1 id="playground-title"><span class="pg-brand-name">Haylen </span>Playground</h1>
     </div>
     <div class="pg-local">
-      <span id="save-status" role="status">Opening workspace…</span>
+      <span id="save-status" role="status">Opening project…</span>
       <span id="offline-status">Preparing offline use…</span>
     </div>
     <button class="pg-button" id="help-button" aria-label="Playground help">
@@ -19,8 +19,8 @@
       <button class="pg-button" id="pause" disabled>{{ICON_PAUSE}}<span>Pause</span></button>
       <button class="pg-button" id="stop" disabled>{{ICON_STOP}}<span>Stop</span></button>
     </div>
-    <label class="pg-hot" for="hot-reload"
-      ><input type="checkbox" id="hot-reload" checked />{{ICON_REFRESH}}<span>Hot reload</span></label
+    <label class="pg-hot" for="hot-reload" title="Apply edits while the preview is running"
+      ><input type="checkbox" id="hot-reload" checked />{{ICON_REFRESH}}<span>Auto update</span></label
     >
     <div class="pg-project-actions">
       <button class="pg-button" id="import-button">{{ICON_UPLOAD}}<span>Import</span></button>
@@ -75,7 +75,7 @@
     >
       <aside class="pg-files" id="files-panel" aria-label="Project files">
         <div class="pg-panel-title">
-          <span>EXPLORER</span
+          <span>FILES</span
           ><span class="pg-file-tools">
             <button id="new-file" aria-label="New file" title="New file">{{ICON_FILE_PLUS}}</button>
             <button id="new-folder" aria-label="New folder" title="New folder">{{ICON_FOLDER_PLUS}}</button>
@@ -84,7 +84,7 @@
             </button>
           </span>
         </div>
-        <div class="pg-project-name"><strong id="project-name">Your project</strong><span>LOCAL</span></div>
+        <div class="pg-project-name"><strong id="project-name">Your project</strong></div>
         <div id="file-tree" class="pg-tree" role="tree" aria-label="Files and folders"></div>
         <div class="pg-file-actions">
           <button class="pg-button" id="rename-item">Rename / move</button>
@@ -110,8 +110,8 @@
         <div class="pg-empty-editor" id="empty-editor">
           {{ICON_CODE}}
           <h2>No file open</h2>
-          <p>Select a file in the explorer to start editing.</p>
-          <button class="pg-button" id="show-files">Open explorer</button>
+          <p>Choose a file from the file list to open it.</p>
+          <button class="pg-button" id="show-files">Show files</button>
         </div>
         <div class="pg-editor-bottom" id="editor-status" hidden>
           <span id="cursor-position"></span><span>UTF-8<span id="file-size"></span></span>
@@ -128,7 +128,7 @@
             </button></span
           >
         </div>
-        <div class="pg-device-toolbar" role="group" aria-label="Preview viewport">
+        <div class="pg-device-toolbar" role="group" aria-label="Preview size">
           <button
             data-device="fit"
             aria-label="Fit preview to panel"
@@ -139,7 +139,7 @@
           </button>
           <button
             data-device="phone"
-            aria-label="Smartphone viewport, 390 by 844"
+            aria-label="Phone size, 390 by 844"
             aria-pressed="false"
             title="Smartphone · 390 × 844"
           >
@@ -147,7 +147,7 @@
           </button>
           <button
             data-device="tablet"
-            aria-label="Tablet viewport, 768 by 1024"
+            aria-label="Tablet size, 768 by 1024"
             aria-pressed="false"
             title="Tablet · 768 × 1024"
           >
@@ -155,7 +155,7 @@
           </button>
           <button
             data-device="desktop"
-            aria-label="Desktop viewport, 1280 by 800"
+            aria-label="Desktop size, 1280 by 800"
             aria-pressed="false"
             title="Desktop · 1280 × 800"
           >
@@ -163,7 +163,7 @@
           </button>
           <button
             id="rotate-preview"
-            aria-label="Rotate viewport"
+            aria-label="Rotate preview"
             aria-pressed="false"
             title="Swap viewport width and height"
           >
@@ -175,13 +175,13 @@
           <div class="pg-preview-screen" id="preview-screen">
             <div class="pg-preview-cover" id="preview-cover">
               <img src="../favicon.svg" alt="" width="44" height="52" />
-              <h2>Run your project.</h2>
-              <p>The preview runs the files in your workspace.</p>
-              <button class="pg-button pg-play" id="preview-play">{{ICON_PLAY}}Start preview</button>
+              <h2>See your project in action.</h2>
+              <p>Press Play to try your game or app here.</p>
+              <button class="pg-button pg-play" id="preview-play">{{ICON_PLAY}}Play</button>
             </div>
           </div>
         </div>
-        <div class="pg-preview-meta"><span id="render-stats">Haylen · WebAssembly</span></div>
+        <div class="pg-preview-meta"><span id="render-stats">Preview ready</span></div>
         <div class="pg-console-section" id="console-panel">
           <div class="pg-console-head">
             <span>CONSOLE <b id="console-count">0</b></span
@@ -191,18 +191,12 @@
             >
           </div>
           <div class="pg-console" id="console" role="log" aria-label="Project console" aria-live="polite">
-            <p class="pg-console-welcome">Project output and runtime errors appear here.</p>
+            <p class="pg-console-welcome">Messages and errors from your project appear here.</p>
           </div>
         </div>
       </section>
     </div>
   </div>
-  <footer class="pg-build" aria-label="IDE build information">
-    <span>Build <time id="build-time" datetime="{{BUILD_TIME_ISO}}">{{BUILD_TIME_UTC}}</time></span>
-    <button id="update-ide" type="button" hidden title="Save your project and load the updated IDE">
-      Update IDE
-    </button>
-  </footer>
   <div
     class="pg-notice"
     id="workspace-notice"
@@ -225,7 +219,7 @@
   <form id="action-form">
     <h2 id="dialog-title">New file</h2>
     <p id="dialog-description"></p>
-    <label id="path-label" for="path-input">Project path</label
+    <label id="path-label" for="path-input">Name and folder</label
     ><input
       id="path-input"
       autocomplete="off"
@@ -246,10 +240,10 @@
   aria-labelledby="examples-title"
   aria-describedby="examples-description"
 >
-  <h2 id="examples-title">Choose an example.</h2>
+  <h2 id="examples-title">Choose a starting point.</h2>
   <p id="examples-description">
-    Open a complete project and make it your own. Loading an example replaces the current files after
-    confirmation.
+    Open a game or app and make it your own. Loading an example replaces your current files. Use Export ZIP
+    first to keep a copy.
   </p>
   <p id="example-status" role="status"></p>
   <div id="example-list" class="pg-example-list"></div>
@@ -257,61 +251,61 @@
 </dialog>
 <dialog class="pg-dialog pg-help" id="help-dialog" aria-labelledby="help-title">
   <p class="pg-kicker">HAYLEN PLAYGROUND</p>
-  <h2 id="help-title">Your local workspace.</h2>
+  <h2 id="help-title" tabindex="-1" autofocus>Using the playground</h2>
+  <p>Choose an example, edit its files, and press Play to try your changes.</p>
   <ol>
     <li>
-      <strong>Manage files.</strong> Open the explorer from the left toolbar. Create, rename, move or delete
-      files and folders. Drop files into the explorer to import them locally.
+      <strong>Open and edit files.</strong> Choose a file to edit it. Use the left toolbar to show or hide
+      panels. Closing a file does not delete it.
     </li>
     <li>
-      <strong>Edit your project.</strong> Select a file to open it. Use the tab's close button to close it
-      without deleting it. Hide the editor or explorer from the left toolbar to make more room.
+      <strong>Try your project.</strong> Play starts it, Pause holds it in place, and Stop ends it. Click or
+      tap the preview to use it. The console shows messages and errors. Click an error's file name to open
+      that line.
     </li>
     <li>
-      <strong>Run and inspect.</strong> Play starts the current project. Pause keeps its state. Stop ends the
-      preview. Click or tap the preview to use its controls. The console shows output and errors. Click an
-      error with a file location to open that line.
+      <strong>Try different screen sizes.</strong> Use the phone, tablet and desktop buttons. Rotate turns the
+      preview sideways; Fit fills the space. Hide the console for more room.
     </li>
     <li>
-      <strong>Check screen sizes.</strong> Use the smartphone, tablet and desktop buttons above the preview.
-      Each sets the app viewport to that size and scales it to fit. Rotate swaps its width and height. Fit
-      uses the available panel space. Hiding the console gives the preview more room.
+      <strong>See edits as you work.</strong> Auto update applies edits while your project runs. If a change
+      does not appear, press Play again. If your code freezes the tab, reload it to reopen your last saved
+      files.
     </li>
     <li>
-      <strong>Apply changes.</strong> Hot reload applies supported Lua and asset edits while running.
-      Initialization changes may restart the project. Correct a Lua error and use Play for a clean run.
+      <strong>Add or replace files.</strong> Drop files into the file list or use Import. A Haylen project ZIP
+      replaces all current files after you confirm.
     </li>
     <li>
-      <strong>Import a complete project.</strong> A project ZIP replaces the whole workspace after
-      confirmation. Include the project settings and main Lua script, keeping the project's folder structure.
-      Importing removes all previous files from the workspace.
+      <strong>Keep a copy.</strong> Your edits save in this browser. Export ZIP downloads a backup. Clearing
+      your browser data removes your saved project too.
     </li>
     <li>
-      <strong>Choose an example.</strong> Open Examples to load a game or app project. Export your current
-      work first if you want to keep it. Examples are available offline after the offline indicator is ready.
-    </li>
-    <li>
-      <strong>Keep your work.</strong> Changes save in this browser. Export ZIP creates a portable backup.
-      After the offline indicator is ready, you can keep working without a connection.
+      <strong>Work without internet.</strong> Wait for “Available offline” before disconnecting. Playground
+      updates keep your saved files. To get an example's latest code, load it again from Examples.
     </li>
   </ol>
   <p class="pg-help-note">
-    C++ and native plugin compilation use the Haylen build tools. This browser runtime cannot interrupt an
-    infinite loop yet.
+    This playground runs Haylen projects written in Lua. To run C++ code or add your own plugins, use Haylen
+    on your computer.
   </p>
-  <button class="pg-button pg-play" id="close-help" autofocus>Back to workspace</button>
+  <div class="pg-help-build">
+    <p>Last built <time id="build-time" datetime="{{BUILD_TIME_ISO}}">{{BUILD_TIME_UTC}}</time></p>
+    <button class="pg-button" id="update-ide" type="button" hidden>Update playground</button>
+  </div>
+  <button class="pg-button pg-play" id="close-help">Back to editor</button>
 </dialog>
 <dialog class="pg-dialog" id="import-dialog" aria-labelledby="import-title">
-  <h2 id="import-title">Import into your workspace.</h2>
+  <h2 id="import-title">Add files or open a project</h2>
   <p>
-    Files and folders are added to the selected folder. A complete project ZIP replaces every existing file
-    after confirmation.
+    Files and folders go into the folder you selected. A project ZIP replaces all current files after you
+    confirm. Use Export ZIP first if you want to keep a copy.
   </p>
   <div class="pg-import-options">
     <button class="pg-button" id="choose-files">{{ICON_FILE}}Files or project ZIP</button
     ><button class="pg-button" id="choose-folder">{{ICON_FOLDER}}Folder</button>
   </div>
-  <p class="pg-import-limits">1,000 files and folders · 16 MiB per file · 64 MiB per project</p>
+  <p class="pg-import-limits">Up to 1,000 files and folders · 16 MB per file · 64 MB per project</p>
   <button class="pg-button" id="close-import" autofocus>Cancel</button>
 </dialog>
 <template id="file-icon">{{ICON_FILE}}</template><template id="folder-icon">{{ICON_FOLDER}}</template

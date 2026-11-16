@@ -84,7 +84,9 @@ window.addEventListener('message', ({ source, origin, data, ports }) => {
   const script = document.createElement('script');
   script.src = './runtime/haylen.js';
   script.onerror = () =>
-    send('fatal', { message: 'The Haylen player could not load. Reconnect once to prepare offline use.' });
+    send('fatal', {
+      message: 'The preview could not load. Connect to the internet and reload this tab, then press Play.',
+    });
   document.head.append(script);
 });
 window.addEventListener('error', (event) => {
