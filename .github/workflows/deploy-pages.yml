@@ -29,6 +29,14 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run build
+      # A runner's regional Ubuntu mirror can be slow enough to time out a job, as
+      # us-east-2.ec2.archive.ubuntu.com was. Point apt at the Azure mirror and the main
+      # archive when the runner reads its mirrors from a list.
+      - name: Use healthy Ubuntu package mirrors
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://archive.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
+          fi
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm test
       - name: Check publication setup
@@ -90,6 +98,14 @@ jobs:
       # The haylen command line is a package that uv runs from the engine's lock.
       - name: Set up uv for the upstream Haylen tooling
         uses: astral-sh/setup-uv@v10.3.3
+      # A runner's regional Ubuntu mirror can be slow enough to time out a job, as
+      # us-east-2.ec2.archive.ubuntu.com was. Point apt at the Azure mirror and the main
+      # archive when the runner reads its mirrors from a list.
+      - name: Use healthy Ubuntu package mirrors
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://archive.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
+          fi
       - name: Install native build prerequisites
         run: sudo apt-get update && sudo apt-get install -y ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libgl1-mesa-dev libegl-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libdbus-1-dev libibus-1.0-dev libudev-dev
       - uses: actions/cache@v4
