@@ -1,8 +1,10 @@
 -- The explore tab: a grid of the pictures of everyone, and the people whose name or handle matches the typed text.
+local events = require('haylen.events')
 local haylen = require('haylen')
 local ui = require('haylen.ui')
 
 local Page = require('page')
+local Routes = require('routes')
 local Shell = require('shell')
 local Social = require('data.social')
 local Style = require('style')
@@ -10,10 +12,10 @@ local Widgets = require('widgets')
 
 local Explore = haylen.class('Explore', Page)
 
-function Explore:enter()
+function Explore:tree()
     local space = Style.space
     self.query = ''
-    self:mountGui(ui.column{grow = 1, gap = 0,
+    return ui.column{grow = 1, gap = 0,
         Shell.centered(980, ui.column{gap = 0,
             ui.row{padding = {space.s, space.m}, ui.filterField{id = 'query', placeholder = 'Search people', grow = 1, returnKey = 'search', style = {metrics = {controlRadius = Style.radius.field}}, onChange = function(event)
                 self.query = string.lower(event.value)
@@ -23,17 +25,23 @@ function Explore:enter()
         Shell.centered(980, ui.column{gap = 0,
             ui.collection{id = 'grid', grow = 1, layout = 'grid', lanes = 3, cellAspect = 1, gap = space.xs, padding = {0, space.s, space.xl, space.s}, rememberFocus = true, types = {tile = Widgets.tile()},
                 onSelect = function(event)
-                    Shell.open(require('screens.post'), {post = event.item})
+                    Shell.open(Routes.post(Social.post(event.item)))
                 end,
             },
             ui.collection{id = 'people', visible = false, grow = 1, gap = 0, padding = {0, 0, space.xl, 0}, rememberFocus = true, types = {person = Widgets.person()},
                 onClick = function(event)
-                    Widgets.onPersonEvent(self.gui:collection('people'), event)
+                    Widgets.toggleFollow(Social.person(event.cell.item))
+                end,
+                onSelect = function(event)
+                    Widgets.openPerson(event.item)
                 end,
                 ui.emptyState{image = Shell.icon('search'), imageSize = 64, title = 'Nobody by that name', message = 'Try another name or handle.'},
             },
         }, 1),
-    })
+    }
+end
+
+function Explore:start()
     local posts = {}
     for _, post in ipairs(Social.posts) do
         if post.author ~= 'me' then
@@ -41,9 +49,14 @@ function Explore:enter()
         end
     end
     self.gui:collection('grid'):setItems(Widgets.tiles(posts))
-    if self.params.focus then
-        self.gui:command('query', 'focus')
-    end
+    events.on('socialChanged', function(changed)
+        Widgets.showFollow(self.gui:collection('people'), changed)
+    end, {owner = self})
+end
+
+-- Puts the focus in the search field, such as when the search button of the home opens the tab.
+function Explore:focusSearch()
+    self.gui:command('query', 'focus')
 end
 
 function Explore:refresh()

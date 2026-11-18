@@ -35,62 +35,41 @@ export async function verifyDemo(directory) {
   if (!modules) throw new Error(`No WebAssembly module in ${directory}`);
 }
 
+// Every Haylen web site, Lua or C++, has the upstream loader and its `config.json`. The
+// runtime would stream content shards by byte range, but Cloudflare Pages answers ranges
+// of uncached `.hpak` files with the whole file, which the runtime refuses. So the loader
+// downloads every shard of the release before startup, as it does for the app domain,
+// and no range request is made. Transparent apps also get a dark page background.
 export async function prepareStaticDemo(directory) {
   const filename = path.join(directory, 'config.json');
-  const config = existsSync(filename) ? JSON.parse(await readFile(filename, 'utf8')) : null;
-  if (config && !config.release) return;
-  if (config && (!Array.isArray(config.release.files) || !config.sizes || typeof config.sizes !== 'object')) {
-    throw new Error(`Invalid Haylen release loader configuration: ${filename}`);
-  }
-  const content = path.join(directory, 'app');
-  if (!existsSync(content)) return;
-  const files = [];
-  for await (const file of filesUnder(content)) {
-    const name = path.relative(content, file).split(path.sep).join('/');
-    if (!/^(?:[a-f0-9]+\.hpak|(?:app|content)\.hmanifest)$/.test(name))
-      throw new Error(`Unexpected protected release file: ${name}`);
-    files.push(name);
-    if (config) config.sizes[`app/${name}`] = (await stat(file)).size;
-  }
-  if (!files.includes('app.hmanifest') || !files.includes('content.hmanifest')) {
-    throw new Error(`Incomplete Haylen protected release: ${directory}`);
-  }
-  // Gallery samples preload their entire release before startup. This keeps their
-  // synchronous startup reads independent of background content-store downloads.
-  if (config) {
+  if (!existsSync(filename)) throw new Error(`The upstream web loader changed; missing ${filename}`);
+  const config = JSON.parse(await readFile(filename, 'utf8'));
+  if (!config.sizes || typeof config.sizes !== 'object')
+    throw new Error(`Invalid Haylen loader configuration: ${filename}`);
+  if (config.release) {
+    if (!Array.isArray(config.release.files))
+      throw new Error(`Invalid Haylen release configuration: ${filename}`);
+    const content = path.join(directory, 'app');
+    const files = [];
+    for await (const file of filesUnder(content)) {
+      const name = path.relative(content, file).split(path.sep).join('/');
+      if (!/^(?:[a-f0-9]+\.hpak|(?:app|content)\.hmanifest)$/.test(name))
+        throw new Error(`Unexpected protected release file: ${name}`);
+      files.push(name);
+      config.sizes[`app/${name}`] = (await stat(file)).size;
+    }
+    for (const name of ['app.hmanifest', 'content.hmanifest', ...config.release.files])
+      if (!files.includes(name))
+        throw new Error(`Incomplete Haylen protected release: ${directory} (${name})`);
     config.release.files = files.sort();
     await writeFile(filename, JSON.stringify(config, null, 2) + '\n');
-    if (config.transparent) {
-      const index = path.join(directory, 'index.html');
-      const html = await readFile(index, 'utf8');
-      await writeFile(
-        index,
-        html.replace('</head>', '<style>html,body{background:#111827!important}</style></head>'),
-      );
-    }
-    return;
   }
-  const index = path.join(directory, 'index.html');
-  const html = await readFile(index, 'utf8');
-  const marker = 'const script = document.createElement("script");';
-  if (html.split(marker).length !== 2)
-    throw new Error('The upstream C++ runtime loader changed; review static release preloading');
-  const runtimeName = html.match(/script\.src = "([a-zA-Z0-9-]+\.js)";/)?.[1];
-  if (!runtimeName) throw new Error('Missing native C++ runtime script');
-  const runtime = await readFile(path.join(directory, runtimeName), 'utf8');
-  const bundled = new Set([...runtime.matchAll(/filename:"\/app\/([^"]+)"/g)].map((match) => match[1]));
-  if (!bundled.has('app.hmanifest') || !bundled.has('content.hmanifest'))
-    throw new Error('The upstream C++ package format changed; review static preloading');
-  const additional = files.filter((name) => !bundled.has(name)).sort();
-  const preload = `const staticContent = await Promise.all(${JSON.stringify(additional)}.map(async (name) => {
-    const response = await fetch(new URL("app/" + name, document.baseURI));
-    if (!response.ok) throw new Error("Could not load sample content: " + name);
-    return {name, bytes: new Uint8Array(await response.arrayBuffer())};
-  }));
-  Module.preRun.push(() => {
-    Module.FS.mkdirTree("/app");
-    for (const file of staticContent) Module.FS.writeFile("/app/" + file.name, file.bytes);
-  });
-  ${marker}`;
-  await writeFile(index, html.replace(marker, preload));
+  if (config.transparent) {
+    const index = path.join(directory, 'index.html');
+    const html = await readFile(index, 'utf8');
+    await writeFile(
+      index,
+      html.replace('</head>', '<style>html,body{background:#111827!important}</style></head>'),
+    );
+  }
 }

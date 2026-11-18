@@ -94,5 +94,21 @@
     "description": "A C++ project that uses Haylen to draw its logo, text and an animated orbit.",
     "cover": "cpp",
     "image": "cpp-embedding-preview.png"
+  },
+  {
+    "path": "apps/car-dashboard",
+    "name": "Car Dashboard",
+    "category": "Apps",
+    "description": "The screen of an electric car on a city drive, with a live speedometer, lane assist, turn-by-turn map, battery, tyres and climate.",
+    "cover": "car",
+    "image": "apps-car-dashboard-preview.png"
+  },
+  {
+    "path": "apps/smart-home",
+    "name": "Smart Home",
+    "category": "Apps",
+    "description": "A wall-panel home controller with room lights, scenes, thermostat, door camera, solar energy and appliances that change through the day.",
+    "cover": "home",
+    "image": "apps-smart-home-preview.png"
   }
 ]

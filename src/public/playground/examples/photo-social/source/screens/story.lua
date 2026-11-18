@@ -1,5 +1,4 @@
 -- The stories, full screen: every picture of a person shows for five seconds under bars that fill as it plays, then the next one, then the stories of the next person. A tap on the left third goes back and anywhere else goes on, a press holds the story, the arrows, the directional pad and a remote step through it while it has the focus, and the field at the bottom replies in the direct messages. A phone shows the pictures from edge to edge, and a wide window shows them in a tall frame with arrows beside it.
-local graphics2d = require('haylen.graphics2d')
 local haylen = require('haylen')
 local input = require('haylen.input')
 local ui = require('haylen.ui')
@@ -12,23 +11,17 @@ local Social = require('data.social')
 local Style = require('style')
 
 local Story = haylen.class('Story', Page)
-Story.fullscreen = true
-
-function Story.routeKey(params)
-    return params.index
-end
 
 Story.duration = 5
 Story.tapTime = 0.3
-Story.backTransition = {duration = 0.3, effect = 'push', direction = 'down', ease = 'cubicOut'}
 Story.white = '#FFFFFFFF'
 Story.field = {colors = {raised = '#26FFFFFF', border = '#99FFFFFF', borderStrong = '#FFFFFFFF', text = '#FFFFFFFF', textMuted = '#D9FFFFFF', caret = '#FFFFFFFF', focus = '#FFFFFFFF'}, metrics = {controlRadius = Style.radius.field}}
 Story.onPhoto = {colors = {text = '#FFFFFFFF', hover = '#26FFFFFF', pressed = '#40FFFFFF'}}
 
-function Story:enter()
+function Story:tree()
     self.storyIndex = self.params.index
     self.frame, self.elapsed = 1, 0
-    self:mountGui(ui.stack{id = 'root', onCancel = Shell.back}, {placement = 'screen'})
+    return ui.stack{id = 'root'}
 end
 
 function Story:layoutChanged(wide)
@@ -70,12 +63,12 @@ function Story:stage(wide)
         self:overlay(wide),
     }
     if not wide then
-        return ui.row{anchor = 'stretch', anchorTo = 'parent', gap = 0, frame}
+        return ui.row{anchor = 'stretch', anchorTo = 'screen', gap = 0, frame}
     end
     frame.grow = 0
     frame.aspectRatio = 9 / 16
     frame.height = self:frameHeight()
-    return ui.row{anchor = 'stretch', anchorTo = 'parent', gap = space.xl, padding = {space.l, 0},
+    return ui.row{anchor = 'stretch', gap = space.xl, padding = {space.l, 0},
         ui.spacer{grow = 1},
         self:arrow('previous', 'back', 'Previous story'),
         frame,
@@ -87,10 +80,7 @@ end
 -- The height of the tall frame of a wide window: the height of the safe area less a margin above and below, from which the frame takes its width.
 function Story:frameHeight()
     local _, unit = ui.scale()
-    local area = viewport.safeRect()
-    local height = area.height / unit - Style.space.l * 2
-    local width = area.width / unit - 128 - Style.space.xl * 4
-    return math.floor(math.max(160, math.min(height, width * 16 / 9)))
+    return math.floor(viewport.safeRect().height / unit - Style.space.l * 2)
 end
 
 function Story:arrow(id, icon, label)
@@ -103,7 +93,7 @@ function Story:closeButton(wide)
     if not wide then
         return ui.spacer{}
     end
-    return ui.button{id = 'closeWide', icon = Shell.icon('close'), variant = 'icon', anchor = 'topRight', margin = Style.space.l, accessibilityLabel = 'Close', tooltip = 'Close', style = Story.onPhoto, onClick = Shell.back}
+    return ui.button{id = 'closeWide', icon = Shell.icon('close'), variant = 'icon', anchor = 'topRight', margin = Style.space.l, accessibilityLabel = 'Close', tooltip = 'Close', style = Story.onPhoto, onClick = ui.goBack}
 end
 
 -- The bars, the person, the note of the picture and the reply, kept inside the safe area of a phone.
@@ -117,13 +107,13 @@ function Story:overlay(wide)
                 ui.label{id = 'name', text = '', font = 'button', color = 'onAccent', wrap = false},
                 ui.label{id = 'age', text = '', font = 'caption', color = 'onAccent', wrap = false},
             },
-            ui.button{id = 'close', icon = Shell.icon('close'), variant = 'icon', visible = not wide, accessibilityLabel = 'Close', tooltip = 'Close', style = Story.onPhoto, onClick = Shell.back},
+            ui.button{id = 'close', icon = Shell.icon('close'), variant = 'icon', visible = not wide, accessibilityLabel = 'Close', tooltip = 'Close', style = Story.onPhoto, onClick = ui.goBack},
         },
         ui.spacer{grow = 1},
         ui.label{id = 'note', text = '', font = 'title', color = 'onAccent', outline = '#73000000', outlineWidth = 3, textAlign = 'center', align = 'stretch'},
         ui.spacer{grow = 1},
         ui.row{gap = space.xs,
-            ui.textField{id = 'reply', value = self.draft or '', placeholder = 'Send a message', grow = 1, returnKey = 'send', style = Story.field,
+            ui.textField{id = 'reply', placeholder = 'Send a message', grow = 1, returnKey = 'send', style = Story.field,
                 onFocus = function()
                     self.typing = true
                 end,
@@ -190,7 +180,7 @@ function Story:next()
         self.storyIndex, self.frame = self.storyIndex + 1, 1
         self:showStory()
     else
-        Shell.back()
+        self.presentation:dismiss()
     end
 end
 
@@ -253,13 +243,9 @@ function Story:update(dt)
     end
 end
 
-function Story:exitTransitionStarted()
+function Story:disappear()
     self.exiting = true
 end
 
-function Story:render()
-    graphics2d.beginScreen()
-    graphics2d.drawRect(viewport.visibleRect(), '#FF101014')
-end
 
 return Story

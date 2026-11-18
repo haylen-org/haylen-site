@@ -1,29 +1,30 @@
+-- A new account: the name, the email and a password typed twice. The account opens the app at once, with a toast that welcomes the person.
 local haylen = require('haylen')
+local http = require('http')
+local scene = require('haylen.scene')
 local ui = require('haylen.ui')
-local Api = require('services.fake-api')
+
+local Accounts = require('services.accounts')
 local Forms = require('widgets.forms')
 local Page = require('page')
-local Session = require('session')
-local Shell = require('shell')
 
-local Signup = haylen.class('PhotoSocialSignup', Page)
+local SignUp = haylen.class('SignUp', Page)
 
-function Signup:enter()
-    self.authScreen = true
+function SignUp:tree()
     self.fields = {name = '', email = '', password = '', confirm = ''}
-    self:mountGui(Forms.layout('A new place to start.', 'Create a demo account to save places and plan trips.', {
+    return Forms.layout('A new place to start.', 'Create a demo account to share your moments.', {
         Forms.field(self, 'name', 'Your name'),
         Forms.field(self, 'email', 'Email address', 'email'),
         Forms.field(self, 'password', 'Create a password', 'password'),
-        Forms.field(self, 'confirm', 'Confirm password', 'password'),
+        Forms.field(self, 'confirm', 'Confirm password', 'password', true),
         ui.button{id = 'submit', text = 'Create account', variant = 'primary', align = 'stretch', onClick = function()
             self:submit()
         end},
-        ui.button{text = 'Already have an account? Sign in', variant = 'link', align = 'center', onClick = Shell.back},
-    }))
+        ui.button{text = 'Already have an account? Sign in', variant = 'link', align = 'center', onClick = ui.goBack},
+    }, true)
 end
 
-function Signup:submit()
+function SignUp:submit()
     if self.submitting then
         return
     end
@@ -37,17 +38,16 @@ function Signup:submit()
     end
 
     Forms.busy(self, true, 'Creating account…')
-    Api.signUp(self.fields, self, function(result, message)
+    scene.spawn(self, function()
+        local request <close> = http.client.controller()
+        local result, message = Accounts.signUp(self.fields, request)
         Forms.busy(self, false, 'Create account')
-        if message then
+        if not result then
             Forms.error(self, message)
             return
         end
-        Session.open(result)
-        Api.activate(result.user)
-        Shell.showTab('home')
-        Shell.notify('Your account is ready.', 'success')
+        require('auth').finish(result.user, 'Your account is ready.')
     end)
 end
 
-return Signup
+return SignUp

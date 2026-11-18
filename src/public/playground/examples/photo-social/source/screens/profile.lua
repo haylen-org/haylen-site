@@ -3,8 +3,8 @@ local events = require('haylen.events')
 local haylen = require('haylen')
 local ui = require('haylen.ui')
 
-local Chats = require('chats')
 local Page = require('page')
+local Routes = require('routes')
 local Shell = require('shell')
 local Social = require('data.social')
 local Style = require('style')
@@ -12,53 +12,78 @@ local Widgets = require('widgets')
 
 local Profile = haylen.class('Profile', Page)
 
-Profile.sections = {{id = 'posts', text = 'Posts'}, {id = 'saved', text = 'Saved'}}
+-- The name and the bio of the person's own profile, which asks before it drops changes nobody saved.
+local EditProfile = haylen.class('EditProfile', ui.Screen)
 
-function Profile.routeKey(params)
-    return params.person or 'me'
+function EditProfile:init(person)
+    self.person = person
+    self.name, self.bio = person.name, person.bio
 end
 
-function Profile:enter()
+function EditProfile:build()
+    local space = Style.space
+    return ui.column{gap = space.m, padding = {space.xs, space.l, space.l, space.l},
+        ui.row{gap = space.s,
+            ui.button{id = 'cancel', text = 'Cancel', variant = 'link', onClick = function() ui.goBack() end},
+            ui.label{text = 'Edit profile', font = 'heading', grow = 1, textAlign = 'center'},
+            ui.button{id = 'save', text = 'Save', variant = 'primary', onClick = function() self.presentation:dismiss({result = {name = self.name, bio = self.bio}}) end},
+        },
+        ui.formField{label = 'Name', ui.textField{id = 'editName', value = self.name, maxLength = 40, autocapitalize = 'words', returnKey = 'next', onChange = function(event)
+            self.name = event.value
+        end}},
+        ui.formField{label = 'Bio', ui.textArea{id = 'editBio', value = self.bio, maxLength = 80, rows = 2, onChange = function(event)
+            self.bio = event.value
+        end}},
+    }
+end
+
+-- Cancel, Escape, the back button, a tap beside the sheet and a drag down ask first while the profile has changes nobody saved.
+function EditProfile:back()
+    if self.name == self.person.name and self.bio == self.person.bio then
+        return false
+    end
+    ui.presentAlert{title = 'Discard your changes?', message = 'The name and the bio you typed are not saved.', owner = self,
+        actions = {{id = 'keep', text = 'Keep editing', role = 'cancel'}, {id = 'discard', text = 'Discard', role = 'destructive'}},
+        onDismiss = function(event)
+            if event.result == 'discard' then
+                self.presentation:dismiss()
+            end
+        end}
+    return true
+end
+
+Profile.sections = {{id = 'posts', text = 'Posts'}, {id = 'saved', text = 'Saved'}}
+
+function Profile:tree()
     local person = Social.person(self.params.person or 'me')
     self.person = person
     self.section = 'posts'
     local space = Style.space
-    local list = ui.collection{id = 'grid', grow = 1, layout = 'grid', lanes = 3, cellAspect = 1, gap = space.xs, padding = {0, space.s, space.xl, space.s}, rememberFocus = true, scrollbar = false,
-        types = {
-            head = {template = self:headTemplate(), span = 'full', interactive = false, estimatedSize = 560},
-            tile = Widgets.tile(),
-            empty = {
-                template = ui.emptyState{
-                    image = Shell.icon('bookmark'), imageSize = 64,
-                    title = 'No saved posts yet',
-                    message = 'Tap the bookmark on a post to keep it here.',
-                },
-                span = 'full', interactive = false, estimatedSize = 220,
-            },
-        },
+    local list = ui.collection{id = 'grid', grow = 1, layout = 'grid', lanes = 3, cellAspect = 1, gap = space.xs, padding = {0, space.s, space.xl, space.s}, rememberFocus = true,
+        types = {head = {template = self:headTemplate(), span = 'full', interactive = false, estimatedSize = 560}, tile = Widgets.tile()},
         onClick = function(event)
             self:headAction(event.part)
         end,
         onChange = function(event)
             if event.part == 'section' then
-                if event.value ~= self.section then
-                    self.section = event.value
-                    self:showGrid()
-                end
+                self.section = event.value
+                self:showGrid()
             end
         end,
         onSelect = function(event)
             if not event.part then
-                Shell.open(require('screens.post'), {post = event.item})
+                Shell.open(Routes.post(Social.post(event.item)))
             end
         end,
     }
     local content = ui.column{grow = 1, gap = 0,
-        self.rootTab == 'profile' and ui.column{id = 'topBar', gap = 0, ui.row{height = Style.size.header, padding = {0, space.m}, ui.label{text = person.handle, font = 'heading', grow = 1, wrap = false}, ui.button{text = 'Sign out', variant = 'link', onClick = Shell.signOut}}, ui.divider{}} or Shell.header(person.handle),
+        self.params.person == nil and ui.column{id = 'topBar', gap = 0, ui.row{height = Style.size.header, padding = {0, space.m}, ui.label{text = person.handle, font = 'heading', grow = 1, wrap = false}, ui.button{text = 'Sign out', variant = 'link', onClick = Shell.signOut}}, ui.divider{}} or Shell.header(person.handle),
         Shell.centered(980, ui.column{gap = 0, list}, 1),
-        self:editDialog(),
     }
-    self:mountGui(content)
+    return content
+end
+
+function Profile:start()
     self.list = self.gui:collection('grid')
     events.on('socialChanged', function()
         self:showGrid()
@@ -69,8 +94,8 @@ function Profile:enter()
 end
 
 function Profile:layoutChanged(wide)
-    if self.rootTab == 'profile' and self.gui:has('topBar') then
-        self.gui:set('topBar', {visible = not self.chromeWide})
+    if self.gui:has('topBar') then
+        self.gui:set('topBar', {visible = not wide})
     end
 end
 
@@ -99,7 +124,7 @@ function Profile:headTemplate()
             ui.button{part = 'primary', bind = {text = 'primaryText', variant = 'primaryVariant'}, text = '', grow = 1},
             ui.button{part = 'secondary', bind = {text = 'secondaryText'}, text = '', grow = 1},
         },
-        ui.segmentedControl{part = 'section', bind = {visible = 'mine', selected = 'section'}, items = Profile.sections, selected = 'posts', visible = false},
+        ui.segmentedControl{part = 'section', bind = {visible = 'mine'}, items = Profile.sections, selected = 'posts', visible = false},
     }
 end
 
@@ -119,17 +144,12 @@ function Profile:headItem()
         primaryVariant = (mine or person.followed) and 'default' or 'primary',
         secondaryText = mine and 'New post' or 'Message',
         mine = mine,
-        section = self.section,
     }
 end
 
 function Profile:showGrid()
     local posts = self.section == 'saved' and Social.savedPosts() or self.person.posts
     local items = Widgets.tiles(posts)
-    -- The header is always an item, so an empty collection needs its own row.
-    if #items == 0 and self.section == 'saved' then
-        items[1] = {id = 'saved-empty', type = 'empty'}
-    end
     table.insert(items, 1, self:headItem())
     self.list:setItems(items)
     self.list:reload('head')
@@ -139,44 +159,31 @@ function Profile:headAction(part)
     local person = self.person
     if part == 'primary' then
         if person.me then
-            self.gui:set('editName', {value = person.name})
-            self.gui:set('editBio', {value = person.bio})
-            self.edit = {name = person.name, bio = person.bio}
-            self.gui:set('editDialog', {open = true})
+            self:openEdit()
         else
-            Social.toggleFollow(person)
+            Widgets.toggleFollow(person)
         end
     elseif part == 'secondary' then
         if person.me then
             Shell.showTab('create')
         else
-            Shell.open(require('screens.chat'), {conversation = Chats.with(person).id})
+            Shell.router:open(Routes.chat(person.id))
         end
     end
 end
 
--- The dialog that edits the name and the bio of the person's own profile.
-function Profile:editDialog()
-    if not self.person.me then
-        return ui.spacer{}
-    end
-    return ui.dialog{id = 'editDialog', title = 'Edit profile', buttons = {{id = 'cancel', text = 'Cancel'}, {id = 'save', text = 'Save', variant = 'primary'}},
-        onAnswer = function(event)
-            if event.button == 'save' then
-                local name = self.edit.name:match('^%s*(.-)%s*$')
-                self.person.name = name ~= '' and name or self.person.name
-                self.person.bio = self.edit.bio
-                self:showGrid()
-                Shell.notify('Your profile is up to date.')
-            end
-        end,
-        ui.formField{label = 'Name', ui.textField{id = 'editName', maxLength = 40, autocapitalize = 'words', returnKey = 'next', onChange = function(event)
-            self.edit.name = event.value
-        end}},
-        ui.formField{label = 'Bio', ui.textArea{id = 'editBio', maxLength = 80, rows = 2, onChange = function(event)
-            self.edit.bio = event.value
-        end}},
-    }
+-- Edits the name and the bio of the person's own profile in a sheet, which hands back what the person saved.
+function Profile:openEdit()
+    self.editSheet = ui.present(EditProfile(self.person), {owner = self, onDismiss = function(event)
+        if not event.result then
+            return
+        end
+        local name = event.result.name:match('^%s*(.-)%s*$')
+        self.person.name = name ~= '' and name or self.person.name
+        self.person.bio = event.result.bio
+        self:showGrid()
+        Shell.notify('Your profile is up to date.')
+    end})
 end
 
 return Profile

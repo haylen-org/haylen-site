@@ -1,4 +1,4 @@
--- Photo Social: a made-up photo sharing app with a feed of posts with likes, comments and captions, stories that play full screen, profiles with a grid of pictures and a follow button, a new post with a picture, a crop, a filter and a caption, and direct messages, in a bright white look of rounded prints with a blue to teal ring and a blue accent.
+-- Photo Social: a made-up photo sharing app with a sign in over HTTPS, a feed of posts with likes, comments and captions, stories that play full screen, profiles with a grid of pictures and a follow button, a new post with a picture, a crop, a filter and a caption, and direct messages, in a bright white look of rounded prints with a blue to teal ring and a blue accent.
 local input = require('haylen.input')
 local system = require('haylen.system')
 local ui = require('haylen.ui')
@@ -7,8 +7,8 @@ local Style = require('style')
 
 Style.register()
 
+local Auth = require('auth')
 local Photos = require('photos')
-local Shell = require('shell')
 
 -- The arrows, the directional pad and the left stick step through the stories while their picture has the focus.
 input.defineAction({name = 'storyPrevious', type = 'button', bindings = {'key:left', 'button:dpadLeft', 'axis:leftX-'}})
@@ -20,4 +20,5 @@ if system.info().deviceKind == 'tv' then
 end
 ui.setTheme('photos')
 Photos.start()
-Shell.start()
+-- The app opens on the sign-in flow, which hands over to the main app once the person signs in.
+Auth.start()

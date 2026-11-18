@@ -1,64 +1,25 @@
--- The app owns its menus once. Screens change inside that shared frame.
--- Phones use the bottom bar, while wide windows use the navigation rail.
+-- The frame of the app: the tabs, the routes of its links, the messages it shows and the layout that follows the width of the window. Phones show a bar of icons at the bottom, and wide windows show a rail with the wordmark and the names of the tabs on the left. The frame mounts once in the scene of the app, and the screens of each tab live in a stack of their own in its middle, so going to another screen changes only the middle while the bars stay. A new post and the stories open over everything as presentations, a new flow with bars of their own. Signing in and out changes the whole app, so the sign-in flow of `source/auth.lua` is a scene of its own that this scene replaces.
+local async = require('async')
 local events = require('haylen.events')
-local scene = require('haylen.scene')
+local graphics2d = require('haylen.graphics2d')
+local system = require('haylen.system')
 local ui = require('haylen.ui')
 local viewport = require('haylen.viewport')
-local window = require('haylen.window')
 
 local Style = require('style')
 
 local Shell = {}
-Shell.chrome = {colors = {panel = '#FFFFFFFF'}, metrics = {panelRadius = 0, panelPadding = 0, borderWidth = 0}}
 
 Shell.tabs = {
     {id = 'home', text = 'Home', icon = 'home', screen = 'screens.home'},
     {id = 'explore', text = 'Explore', icon = 'explore', screen = 'screens.explore'},
-    {id = 'create', text = 'New post', image = 'images/create.svg', screen = 'screens.compose-pick', push = true},
-    {id = 'messages', text = 'Messages', icon = 'messages', screen = 'screens.inbox'},
+    {id = 'create', text = 'New post', image = 'images/create.svg'},
+    {id = 'messages', text = 'Messages', icon = 'messages', screen = 'screens.messages'},
     {id = 'profile', text = 'Profile', screen = 'screens.profile'},
 }
-Shell.pushTransition = {duration = 0.28, effect = 'slideIn', direction = 'left', ease = 'cubicOut'}
-Shell.backTransition = {duration = 0.24, effect = 'slideIn', direction = 'right', ease = 'cubicOut'}
-Shell.riseTransition = {duration = 0.3, effect = 'moveIn', direction = 'up', ease = 'cubicOut'}
-Shell.current = 'home'
 
-local function reserveNavigation()
-    if Shell.navigating or scene.transitioning() then
-        return false
-    end
-    Shell.navigating = true
-    return true
-end
-
--- Stack changes start on the next update. Reserve them before another tap arrives.
-local function navigationOptions(transition, complete)
-    local options = {}
-    for key, value in pairs(transition or {}) do
-        options[key] = value
-    end
-    local previousComplete = options.onComplete
-    options.onComplete = function(done)
-        Shell.navigating = false
-        if complete then
-            complete(done)
-        end
-        if previousComplete then
-            previousComplete(done)
-        end
-        window.setBackLeavesApp(scene.size() <= 1 and not Shell.composerLevel
-            and (Shell.current == 'home' or Shell.current == 'login'))
-    end
-    return options
-end
-
-local function makePage(Screen, params, rootTab)
-    local page = Screen(params)
-    page.rootTab = rootTab
-    page.navigationScreen = Screen
-    page.navigationKey = Screen.routeKey and Screen.routeKey(params or {}) or nil
-    return page
-end
+-- The scene of the app, which owns the frame and its navigation, paints the background of the theme behind them and keeps the frame current every frame.
+Shell.scene = {}
 
 function Shell.icon(name)
     return 'icons/' .. name .. '.svg'
@@ -70,139 +31,166 @@ function Shell.width()
     return viewport.safeRect().width / unit
 end
 
--- Mounts the notices, which stay above every screen, and shows the first tab.
-function Shell.start()
-    Shell.notices = ui.mount(ui.toast{id = 'notice', position = 'top', duration = 2.5, indicator = 'icon'}, {layer = 10, sharedFocus = true})
-    Shell.mountChrome()
-    Shell.showLogin()
-end
-
-function Shell.notify(text, tone)
-    Shell.notices:command('notice', 'show', {text = text, tone = tone or 'neutral'})
-end
-
--- Shows a tab as the only screen, without a transition, the way native tab bars switch, or pushes the screen of a tab that opens over the others, such as a new post.
-function Shell.showTab(id, params)
-    if Shell.composerLevel then
-        return false
-    end
+-- Mounts the frame and the tabs in the middle of the frame, starts the routes of the links over the tabs, and shows a banner for each answer that arrives in a chat that does not show. The scene enters again after every sign in, with a new frame.
+function Shell.scene:enter()
+    Shell.wide = nil
+    Shell.presented = nil
+    Shell.gui = ui.mount(Shell.frame(), {owner = self, sharedFocus = true})
+    -- The toasts and snackbars keep above the bars of the frame, so they never cover the tabs or the player.
+    ui.setMessageArea{gui = Shell.gui, id = 'middle'}
+    Shell.adaptFrame()
+    local tabs = {}
     for _, tab in ipairs(Shell.tabs) do
-        if tab.id == id then
-            if tab.push then
-                if not reserveNavigation() then
-                    return false
-                end
-                Shell.composerLevel = scene.size()
-                window.setBackLeavesApp(false)
-                return scene.push(makePage(require(tab.screen), params), navigationOptions(Shell.riseTransition, function(done)
-                    if not done then
-                        Shell.composerLevel = nil
-                    end
-                end))
-            end
-            if not reserveNavigation() then
-                return false
-            end
-            Shell.current = id
-            if scene.size() > 1 then
-                scene.popToRoot()
-            end
-            local change = scene.replace(makePage(require(tab.screen), params, id), navigationOptions({duration = 0}))
-            window.setBackLeavesApp(id == 'home')
-            return change
+        if tab.screen then
+            tabs[#tabs + 1] = {id = tab.id, root = function() return require(tab.screen)() end}
         end
     end
+    Shell.navigation = ui.navigationTabs{gui = Shell.gui, id = 'middle', tabs = tabs, owner = self, onChange = function(event)
+        Shell.select(event.selected, event.previous)
+    end}
+    Shell.router = require('routes').start(Shell.navigation, self)
+    events.on('chatChanged', Shell.showUnread, {owner = self})
+    events.on('chatAnswered', Shell.showAnswer, {owner = self})
+    Shell.showUnread()
+    if Shell.greeting then
+        Shell.notify(Shell.greeting, 'success')
+        Shell.greeting = nil
+    end
 end
 
--- Pushes a screen over the current one with a slide, or with another transition.
-function Shell.open(Screen, params, transition)
-    if Shell.composerLevel and not Screen.composerScreen then
-        return false
-    end
-    local key = Screen.routeKey and Screen.routeKey(params or {}) or nil
-    -- Revisit an existing post, person or conversation instead of stacking a cycle.
-    for level = scene.size(), 1, -1 do
-        local page = scene.at(level)
-        if page.navigationScreen == Screen and page.navigationKey == key then
-            if level == scene.size() or not reserveNavigation() then
-                return false
+function Shell.scene:update()
+    Shell.adaptFrame()
+end
+
+function Shell.scene:render()
+    graphics2d.beginScreen()
+    graphics2d.drawRect(viewport.visibleRect(), ui.themeColor('window'))
+end
+
+-- Leaves the app for the sign-in flow.
+function Shell.signOut()
+    require('auth').signOut()
+end
+
+-- Confirms what the person just did in a toast at the bottom.
+function Shell.notify(text, tone)
+    ui.showMessage{text = text, tone = tone or 'neutral', indicator = 'icon', owner = Shell.scene}
+end
+
+-- Tells that something went away in a snackbar whose action brings it back.
+function Shell.offerUndo(text, undo)
+    ui.showMessage{style = 'snackbar', text = text, action = 'Undo', owner = Shell.scene, onAction = undo}
+end
+
+-- Asks before something goes away for good in an alert, and calls `confirmed` once the person picks the destructive action.
+function Shell.confirm(title, message, action, confirmed)
+    return ui.presentAlert{title = title, message = message, owner = Shell.scene,
+        actions = {{id = 'keep', text = 'Cancel', role = 'cancel'}, {id = 'confirm', text = action, role = 'destructive'}},
+        onDismiss = function(event)
+            if event.result == 'confirm' then
+                confirmed()
             end
-            return scene.popTo(level, navigationOptions(Shell.backTransition))
+        end}
+end
+
+-- Puts a link on the clipboard and tells whether it got there, since a browser keeps the clipboard from a page without a recent input of the person.
+function Shell.copy(link)
+    async.spawn(function()
+        local _, problem = system.setClipboard(link):await()
+        if problem then
+            Shell.notify(problem, 'warning')
+            return
         end
-    end
-    if not reserveNavigation() then
-        return false
-    end
-    window.setBackLeavesApp(false)
-    return scene.push(makePage(Screen, params), navigationOptions(transition or Shell.pushTransition))
+        Shell.notify('The link is on the clipboard.')
+    end)
 end
 
--- Puts a screen in the place of the current one with the same slide, such as the next step of a new post.
-function Shell.replace(Screen, params)
-    if Shell.composerLevel and not Screen.composerScreen then
-        return false
-    end
-    if not reserveNavigation() then
-        return false
-    end
-    return scene.replace(makePage(Screen, params), navigationOptions(Shell.pushTransition))
+-- Drops a banner with the face of whoever answered under the status bar, and a tap on it opens their chat through its route, in the messages tab beside or over the conversations.
+function Shell.showAnswer(conversation)
+    local answer = conversation.messages[#conversation.messages]
+    ui.showMessage{style = 'banner', title = conversation.name, text = answer.text, icon = conversation.avatar, owner = Shell.scene, onTap = function()
+        Shell.router:open(require('routes').chat(conversation.person))
+    end}
 end
 
--- Cancel every composer step, returning to the exact screen that opened it.
-function Shell.closeCompose()
-    local origin = Shell.composerLevel
-    if not origin or not reserveNavigation() then
-        return false
-    end
-    require('compose').endFlow()
-    return scene.popTo(origin, navigationOptions(Shell.backTransition, function(done)
-        if done then
-            Shell.composerLevel = nil
-        end
-    end))
-end
-
--- Publishing leaves no composer scenes behind the destination feed.
-function Shell.finishCompose()
-    if not Shell.composerLevel or Shell.navigating or scene.transitioning() then
-        return false
-    end
-    require('compose').endFlow()
-    Shell.composerLevel = nil
-    return Shell.showTab('home')
-end
-
--- Goes back one screen, or to the home tab from the root of another tab.
-function Shell.back()
-    if Shell.composerLevel and scene.size() <= Shell.composerLevel + 1 then
-        return Shell.closeCompose()
-    end
-    if scene.size() > 1 then
-        if not reserveNavigation() then
-            return false
-        end
-        return scene.pop(navigationOptions(scene.top().backTransition or Shell.backTransition))
-    elseif Shell.current ~= 'home' and Shell.current ~= 'login' then
-        Shell.showTab('home')
-    end
-end
-
--- Only the central view adapts. Shared navigation keeps its GUI and control state.
-function Shell.adapt(page)
-    local left, bottom, _, chromeWide = Shell.insets(page)
-    local contentWidth = Shell.width() - left
-    local wide = page.rootTab and chromeWide or contentWidth >= Style.wideWidth
-    local roomy = contentWidth >= Style.roomyWidth - Style.size.rail
-    Shell.syncChrome(page)
-    if page.wide == wide and page.roomy == roomy and page.chromeWide == chromeWide then
+-- Shows a tab with the screens it kept, or goes back to its root when it already shows. The tab of a new post presents the new post instead.
+function Shell.showTab(id)
+    if id == 'create' then
+        Shell.compose()
         return
     end
-    page.wide, page.roomy, page.chromeWide = wide, roomy, chromeWide
-    page.gui:set('shell-left-inset', {width = left})
-    page.gui:set('shell-bottom-inset', {height = bottom})
-    if page.gui:has('authArt') then
-        page.gui:set('authArt', {visible = wide})
+    Shell.navigation:select(id)
+end
+
+-- The screen that the person sees: the screen on top of the presentation that shows, or the top screen of the tab that shows.
+function Shell.top()
+    local presented = Shell.presented
+    if presented and not presented.dismissed then
+        local screen = presented.screen
+        return screen.steps and screen.steps.top or screen
     end
+    local top = Shell.navigation.current.top
+    local split = top.split
+    if not split then
+        return top
+    end
+    if split.hasDetail and not split.collapsed then
+        return split.detail.top
+    end
+    return split.primary.top
+end
+
+-- Shows the screen of a location, such as "profile/ava", in the stack of the tab that shows. A screen that already shows the same location further down the stack, such as the profile that a post opened from, comes back instead, so the stack never holds two copies of it.
+function Shell.open(location)
+    local stack = Shell.navigation.current
+    local screens = stack.screens
+    for level = #screens - 1, 1, -1 do
+        local shown = screens[level]
+        if Shell.router:location(shown) == location then
+            stack:popTo(shown)
+            return
+        end
+    end
+    Shell.router:push(location)
+end
+
+-- Presents a new post over everything, a flow of its own with its bar and its steps.
+function Shell.compose()
+    Shell.present(require('screens.new-post')())
+end
+
+-- Presents the stories over everything on their dark stage, from the story at the index, and calls back once they close.
+function Shell.openStory(index, closed)
+    Shell.present(require('screens.story')({index = index}), closed, Style.color.stage)
+end
+
+-- Presents a flow over the whole screen, on the color of the window of the app or another color, while no other presentation shows.
+function Shell.present(screen, closed, color)
+    if Shell.presented and not Shell.presented.dismissed then
+        return
+    end
+    Shell.presented = ui.present(screen, {style = 'fullScreen', color = color or ui.themeColor('window'), owner = Shell.scene, onDismiss = closed})
+end
+
+-- Shows the rail on a wide window and the bar of icons otherwise.
+function Shell.adaptFrame()
+    local wide = Shell.width() >= Style.wideWidth
+    if Shell.wide == wide then
+        return
+    end
+    Shell.wide = wide
+    Shell.gui:set('rail', {visible = wide})
+    Shell.gui:set('tabBar', {visible = not wide})
+end
+
+-- Tells a screen when the window crosses the widths of the wide and roomy layouts.
+function Shell.adapt(page)
+    local width = Shell.width()
+    local wide, roomy = width >= Style.wideWidth, width >= Style.roomyWidth
+    if page.wide == wide and page.roomy == roomy then
+        return
+    end
+    page.wide, page.roomy = wide, roomy
     if page.layoutChanged then
         page:layoutChanged(wide, roomy)
     end
@@ -217,21 +205,24 @@ function Shell.tabIcon(tab, selected)
     if tab.image then
         return tab.image
     end
-
     return Shell.icon(tab.icon .. (selected and '-filled' or ''))
 end
 
-function Shell.tabButton(tab, current, placement)
-    local selected = tab.id == current
+function Shell.tabStyle(selected)
+    return {fonts = {button = {size = Style.type.body, bold = selected}}, metrics = {iconSize = 32, controlPaddingX = Style.space.m, contentSpacing = Style.space.m}}
+end
+
+function Shell.tabButton(tab, placement)
+    local selected = tab.id == Shell.tabs[1].id
     local rail = placement == 'rail'
     -- The face of the profile and the button of a new post keep their colors, and the icons take the color of the text. The button of a new post stands out in the bar.
     local iconColor = 'text'
-    local iconSize = 32
+    local style = Shell.tabStyle(selected)
     if tab.id == 'profile' then
         iconColor = false
     elseif tab.image then
         iconColor = false
-        iconSize = rail and 32 or 48
+        style.metrics.iconSize = rail and 32 or 48
     end
     local button = ui.button{
         id = placement .. '-' .. tab.id,
@@ -245,11 +236,9 @@ function Shell.tabButton(tab, current, placement)
         height = rail and 64 or Style.size.tabBar - Style.space.s,
         accessibilityLabel = tab.text,
         tooltip = not rail and tab.text or nil,
-        style = {fonts = {button = {size = Style.type.body, bold = selected}}, metrics = {iconSize = iconSize, controlPaddingX = Style.space.m, contentSpacing = Style.space.m}},
+        style = style,
         onClick = function()
-            if Shell.current ~= tab.id or scene.size() > 1 or tab.push then
-                Shell.showTab(tab.id)
-            end
+            Shell.showTab(tab.id)
         end,
     }
     if tab.id ~= 'messages' then
@@ -268,14 +257,26 @@ function Shell.tabButton(tab, current, placement)
     }
 end
 
--- The app owns its navigation GUI once. Screens only own the central view.
-function Shell.updateUnread()
+-- Shows the count of unread messages on the tab of the messages.
+function Shell.showUnread()
     local count = require('chats').unreadCount()
-    for _, placement in ipairs({'rail', 'bar'}) do
-        Shell.chromeGui:set(placement .. '-unread', {text = count, visible = count > 0})
+    Shell.gui:set('rail-unread', {text = count, visible = count > 0})
+    Shell.gui:set('bar-unread', {text = count, visible = count > 0})
+end
+
+-- Marks the tab that shows in the rail and in the bar, changing only the look of the two tabs.
+function Shell.select(current, previous)
+    for _, tab in ipairs(Shell.tabs) do
+        if tab.id == current or tab.id == previous then
+            local selected = tab.id == current
+            local look = {icon = Shell.tabIcon(tab, selected), style = Shell.tabStyle(selected)}
+            Shell.gui:set('rail-' .. tab.id, look)
+            Shell.gui:set('bar-' .. tab.id, look)
+        end
     end
 end
 
+-- The wordmark: the logo and the name of the app.
 function Shell.wordmark(size)
     return ui.row{gap = Style.space.s,
         ui.image{image = 'images/logo.svg', width = size, height = size, accessibilityHidden = true},
@@ -283,58 +284,31 @@ function Shell.wordmark(size)
     }
 end
 
-function Shell.mountChrome()
+-- The frame: the rail with the wordmark and the tabs, the middle where the stacks of the tabs show their screens, and the bar of icons.
+function Shell.frame()
     local space = Style.space
-    local rail = {grow = 1, gap = space.xs, padding = {space.xl, space.m, space.l, space.m}, align = 'stretch',
-        ui.row{padding = {0, space.s, space.xl, space.s}, Shell.wordmark(52)},
-    }
-    local bar = {gap = 0, height = Style.size.tabBar, padding = {0, space.s}}
+    local surface = {colors = {panel = 'window'}, metrics = {panelRadius = 0}}
+    local rail = {id = 'railTabs', gap = space.xs, align = 'stretch'}
+    local bar = {id = 'barTabs', gap = 0, height = Style.size.tabBar, padding = {0, space.s}}
     for _, tab in ipairs(Shell.tabs) do
-        rail[#rail + 1] = Shell.tabButton(tab, Shell.current, 'rail')
-        bar[#bar + 1] = Shell.tabButton(tab, Shell.current, 'bar')
+        rail[#rail + 1] = Shell.tabButton(tab, 'rail')
+        bar[#bar + 1] = Shell.tabButton(tab, 'bar')
     end
-    rail[#rail + 1] = ui.spacer{grow = 1}
-    rail[#rail + 1] = ui.button{text = 'Sign out', variant = 'link', align = 'start', onClick = Shell.signOut}
-    Shell.chromeGui = ui.mount(ui.row{gap = 0, onCancel = Shell.back,
-        ui.panel{id = 'rail', width = Style.size.rail, visible = false, padding = 0, align = 'stretch', style = Shell.chrome, ui.column(rail)},
-        ui.column{grow = 1, gap = 0, align = 'stretch',
-            ui.spacer{grow = 1},
-            ui.panel{id = 'tabBar', height = Style.size.tabBar, visible = false, padding = 0, gap = 0, style = Shell.chrome, ui.row(bar)},
+    return ui.row{gap = 0,
+        ui.row{id = 'rail', visible = false, gap = 0, align = 'stretch',
+            ui.panel{width = Style.size.rail, gap = space.xs, padding = {space.xl, space.m, space.l, space.m}, align = 'stretch', style = surface,
+                ui.row{padding = {0, space.s, space.xl, space.s}, Shell.wordmark(52)},
+                ui.column(rail),
+                ui.spacer{grow = 1},
+                ui.button{id = 'rail-signOut', text = 'Sign out', variant = 'toolbar', justify = 'start', align = 'stretch', height = 64, style = Shell.tabStyle(false), onClick = Shell.signOut},
+            },
+            ui.divider{vertical = true, align = 'stretch'},
         },
-    }, {owner = Shell, layer = 5, sharedFocus = true})
-    Shell.chromeGui.visible = false
-    events.on('chatChanged', Shell.updateUnread, {owner = Shell})
-    Shell.updateUnread()
-end
-
-function Shell.insets(page)
-    local shown = not page.authScreen and not page.composerScreen and not page.fullscreen
-    local wide = Shell.width() >= Style.wideWidth
-    return shown and wide and Style.size.rail or 0,
-        shown and not wide and Style.size.tabBar or 0, shown, wide
-end
-
-function Shell.syncChrome(page)
-    local _, _, shown, wide = Shell.insets(page)
-    local state = Shell.chromeState
-    if state and state.shown == shown and state.wide == wide and state.current == Shell.current then
-        return
-    end
-    Shell.chromeState = {shown = shown, wide = wide, current = Shell.current}
-    Shell.chromeGui.visible = shown
-    Shell.chromeGui:set('rail', {visible = wide})
-    Shell.chromeGui:set('tabBar', {visible = not wide})
-    for _, tab in ipairs(Shell.tabs) do
-        local selected = Shell.current == tab.id
-        for _, placement in ipairs({'rail', 'bar'}) do
-            local iconSize = tab.image and (placement == 'rail' and 32 or 48) or 32
-            Shell.chromeGui:set(placement .. '-' .. tab.id, {
-                icon = Shell.tabIcon(tab, selected),
-                style = {fonts = {button = {size = Style.type.body, bold = selected}},
-                    metrics = {iconSize = iconSize, controlPaddingX = Style.space.m, contentSpacing = Style.space.m}},
-            })
-        end
-    end
+        ui.column{grow = 1, gap = 0, align = 'stretch',
+            ui.column{id = 'middle', grow = 1, gap = 0, align = 'stretch'},
+            ui.panel{id = 'tabBar', gap = 0, padding = 0, style = surface, ui.divider{}, ui.row(bar)},
+        },
+    }
 end
 
 -- Centers a node in the width it gets, as wide as it may be up to `maxWidth`. A `grow` lets the row take the free height of a column.
@@ -345,11 +319,10 @@ function Shell.centered(maxWidth, node, grow)
     return ui.row{gap = 0, grow = grow or 0, align = 'stretch', ui.spacer{grow = 1}, node, ui.spacer{grow = 1}}
 end
 
--- A bar at the top of a pushed screen: a back button, a title and optional trailing nodes.
-function Shell.header(title, trailing, options)
-    options = options or {}
+-- A bar at the top of a pushed screen: a back button, which goes back the way the system back does, a title and optional trailing nodes.
+function Shell.header(title, trailing)
     local row = {gap = Style.space.xs, padding = {0, Style.space.s}, height = Style.size.header}
-    row[#row + 1] = ui.button{id = 'back', icon = Shell.icon(options.close and 'close' or 'back'), iconColor = 'text', variant = 'icon', accessibilityLabel = options.close and 'Close' or 'Back', tooltip = options.close and 'Close' or 'Back', onClick = options.onBack or Shell.back}
+    row[#row + 1] = ui.button{id = 'back', icon = Shell.icon('back'), iconColor = 'text', variant = 'icon', accessibilityLabel = 'Back', tooltip = 'Back', onClick = ui.goBack}
     row[#row + 1] = ui.label{id = 'title', text = title, font = 'heading', wrap = false, grow = 1}
     for _, node in ipairs(trailing or {}) do
         row[#row + 1] = node
@@ -357,26 +330,4 @@ function Shell.header(title, trailing, options)
     return ui.column{gap = 0, ui.row(row), ui.divider{}}
 end
 
--- Authentication uses the same scene stack as the rest of the app.
-function Shell.showLogin()
-    if not reserveNavigation() then
-        return false
-    end
-    Shell.current = 'login'
-    if scene.size() > 1 then
-        scene.popToRoot()
-    end
-    local change = scene.replace(makePage(require('screens.login'), nil, 'login'), navigationOptions({duration = 0}))
-    window.setBackLeavesApp(true)
-    return change
-end
-
-function Shell.signOut()
-    if not Shell.showLogin() then
-        return false
-    end
-    require('services.fake-api').signOut()
-    require('session').close()
-    return true
-end
 return Shell

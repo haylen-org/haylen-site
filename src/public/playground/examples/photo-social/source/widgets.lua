@@ -1,10 +1,12 @@
--- The building blocks the screens share: the templates of posts, comments, people, stories and the tiles of a grid, what the buttons of a post do, and the dialog that sends a post to a friend.
+-- The building blocks the screens share: the templates of posts, comments, people, stories and the tiles of a grid, what the buttons of a post do, the action sheet that shares a post, the sheet that sends a post to a friend and following with a snackbar that takes an unfollow back.
 local tween = require('haylen.tween')
 local math2d = require('haylen.math')
+local haylen = require('haylen')
 local ui = require('haylen.ui')
 
 local Chats = require('chats')
 local Photos = require('photos')
+local Routes = require('routes')
 local Shell = require('shell')
 local Social = require('data.social')
 local Style = require('style')
@@ -19,6 +21,8 @@ Widgets.postMenu = {
     {id = 'send', text = 'Send to a friend', image = Shell.icon('share')},
     {id = 'save', text = 'Save or unsave', image = Shell.icon('bookmark')},
 }
+-- The menu of a comment of the person.
+Widgets.commentMenu = {{id = 'delete', text = 'Delete comment', image = Shell.icon('trash')}}
 -- The buttons under a picture: an icon with its count, flat and close together.
 Widgets.countButton = {metrics = {controlPaddingX = Style.space.s, contentSpacing = Style.space.xs}}
 
@@ -54,7 +58,7 @@ function Widgets.post(wide, gallery)
         ui.row{gap = 0, padding = {space.xs, gutter - space.s, 0, gutter - space.s},
             ui.button{part = 'like', bind = {icon = 'likeIcon', iconColor = 'likeColor', text = 'likeCountText'}, text = '', icon = Shell.icon('heart'), iconColor = 'text', variant = 'toolbar', style = Widgets.countButton, accessibilityLabel = 'Like'},
             ui.button{part = 'comment', bind = {text = 'commentCountText'}, text = '', icon = Shell.icon('comment'), iconColor = 'text', variant = 'toolbar', style = Widgets.countButton, accessibilityLabel = 'Comments'},
-            ui.button{part = 'send', text = 'Share', icon = Shell.icon('share'), iconColor = 'text', variant = 'toolbar', style = Widgets.countButton, accessibilityLabel = 'Send to a friend'},
+            ui.button{part = 'send', text = 'Share', icon = Shell.icon('share'), iconColor = 'text', variant = 'toolbar', style = Widgets.countButton, accessibilityLabel = 'Share'},
             ui.spacer{grow = 1},
             ui.button{part = 'save', bind = {icon = 'saveIcon'}, icon = Shell.icon('bookmark'), iconColor = 'text', variant = 'icon', accessibilityLabel = 'Save'},
         },
@@ -92,12 +96,12 @@ function Widgets.onPostEvent(page, list, event)
         end
         list:reload(post.id)
     elseif part == 'save' then
-        Social.toggleSave(post)
+        Widgets.toggleSave(post)
         list:reload(post.id)
     elseif part == 'comment' then
-        Shell.open(require('screens.post'), {post = post.id})
+        Shell.open(Routes.post(post))
     elseif part == 'send' then
-        Widgets.askFriend(page, post)
+        Widgets.sharePost(page, post)
     elseif part == 'author' or part == 'face' then
         Widgets.openPerson(post.author)
     elseif part == 'more' then
@@ -106,46 +110,101 @@ function Widgets.onPostEvent(page, list, event)
         elseif event.item == 'send' then
             Widgets.askFriend(page, post)
         else
-            Social.toggleSave(post)
+            Widgets.toggleSave(post)
             list:reload(post.id)
         end
     end
 end
 
-function Widgets.openPerson(id)
-    Shell.open(require('screens.profile'), {person = id})
+-- Saves a post or takes it out of the collection, which a snackbar offers to undo. The screens that show the post follow it through "socialChanged".
+function Widgets.toggleSave(post)
+    if Social.toggleSave(post) then
+        Shell.notify('Saved to your collection.')
+        return
+    end
+    Shell.offerUndo('Removed from your collection.', function()
+        Social.toggleSave(post)
+    end)
 end
 
--- The dialog that sends a post to one of the conversations, which every screen of posts mounts.
-function Widgets.friendDialog(page)
+function Widgets.openPerson(id)
+    Shell.open(Routes.profile(id))
+end
+
+-- Shows whether the person follows someone in a list of people, once that changed.
+function Widgets.showFollow(list, person)
+    if list:indexOf(person.id) then
+        Widgets.describePerson(person)
+        list:reload(person.id)
+    end
+end
+
+-- Follows a person or stops following them, which a snackbar offers to take back.
+function Widgets.toggleFollow(person)
+    if Social.toggleFollow(person) then
+        return
+    end
+    Shell.offerUndo('You unfollowed ' .. person.handle .. '.', function()
+        if not person.followed then
+            Social.toggleFollow(person)
+        end
+    end)
+end
+
+-- Offers the ways to share a post in an action sheet, which points at the share button that opened it on a wide window: sending it to a friend in a chat, or putting its link on the clipboard.
+function Widgets.sharePost(page, post, anchor)
+    local location = Routes.post(post)
+    page.shareSheet = ui.presentAlert{style = 'actionSheet', title = 'Share the post of ' .. post.authorName, anchor = anchor, owner = page,
+        actions = {{id = 'send', text = 'Send to a friend'}, {id = 'web', text = 'Copy link'}, {id = 'app', text = 'Copy the link of the app'}, {id = 'cancel', text = 'Cancel', role = 'cancel'}},
+        onDismiss = function(event)
+            if event.result == 'send' then
+                Widgets.askFriend(page, post)
+            elseif event.result == 'web' then
+                Shell.copy(Routes.webLink(location))
+            elseif event.result == 'app' then
+                Shell.copy(Routes.link(location))
+            end
+        end}
+end
+
+-- The conversations a post goes to, in a sheet that rests at half the screen and opens to nearly all of it, which hands the chosen conversation back.
+local PickFriend = haylen.class('PickFriend', ui.Screen)
+
+function PickFriend:build()
+    local space = Style.space
     local items = {}
     for _, conversation in ipairs(Chats.list) do
         items[#items + 1] = {id = conversation.id, text = conversation.name, caption = conversation.handle, image = conversation.avatar, iconColor = false}
     end
-    page.friend = items[1].id
-    return ui.dialog{id = 'friendDialog', title = 'Send to a friend', buttons = {{id = 'cancel', text = 'Cancel'}, {id = 'send', text = 'Send', variant = 'primary'}},
-        onAnswer = function(event)
-            if event.button == 'send' then
-                local conversation = Chats.find(page.friend)
-                Chats.send(conversation, 'Look at this post', page.sharing)
-                Shell.notify('Sent to ' .. conversation.name .. '.')
-            end
-        end,
-        ui.list{id = 'friendList', items = items, selected = items[1].id, height = 72 * 4, onSelect = function(event)
-            page.friend = event.item
+    self.friend = items[1].id
+    return ui.column{gap = space.m, padding = {space.xs, space.l, space.l, space.l},
+        ui.row{gap = space.s,
+            ui.button{id = 'cancel', text = 'Cancel', variant = 'link', onClick = function() self.presentation:dismiss() end},
+            ui.label{text = 'Send to a friend', font = 'heading', grow = 1, textAlign = 'center'},
+            ui.button{id = 'send', text = 'Send', variant = 'primary', onClick = function() self.presentation:dismiss({result = self.friend}) end},
+        },
+        ui.list{id = 'friendList', grow = 1, items = items, selected = items[1].id, autofocus = true, onSelect = function(event)
+            self.friend = event.item
         end},
     }
 end
 
+-- Sends a post to the conversation the person picks in a sheet.
 function Widgets.askFriend(page, post)
-    page.sharing = post
-    page.gui:set('friendDialog', {open = true})
+    page.friendSheet = ui.present(PickFriend(), {detents = {'medium', 'large'}, owner = page, onDismiss = function(event)
+        if not event.result then
+            return
+        end
+        local conversation = Chats.find(event.result)
+        Chats.send(conversation, 'Look at this post', post)
+        Shell.notify('Sent to ' .. conversation.name .. '.')
+    end})
 end
 
--- The template of a comment: the face, the name with the text, how long ago and the likes.
-function Widgets.comment()
+-- The template of a comment: the face, the name with the text, how long ago and the likes. A comment of the person has a menu that deletes it, which a right click, a long press or the menu button opens.
+function Widgets.comment(mine)
     local space = Style.space
-    return {template = ui.row{gap = space.s, padding = {space.s, space.m}, alignItems = 'start',
+    local row = ui.row{gap = space.s, padding = {space.s, space.m}, alignItems = 'start',
         ui.avatar{part = 'avatar', bind = {image = 'avatar'}, size = Style.size.avatarSmall},
         ui.column{gap = space.xxs, grow = 1,
             ui.richText{part = 'text', bind = {text = 'markup'}, text = ''},
@@ -154,34 +213,24 @@ function Widgets.comment()
                 ui.label{part = 'likes', bind = {text = 'likesText'}, font = 'caption', color = 'textMuted'},
             },
         },
-    }, interactive = false, estimatedSize = 92}
+    }
+    if not mine then
+        return {template = row, interactive = false, estimatedSize = 92}
+    end
+    return {template = ui.contextMenu{part = 'menu', items = Widgets.commentMenu, row}, interactive = true, estimatedSize = 92}
 end
 
 -- The template of a person in a list: the face, the handle, the name and the button that follows.
 function Widgets.person()
     local space = Style.space
     return {template = ui.row{gap = space.s, padding = {space.xs, space.m},
-        ui.imageButton{part = 'face', bind = {image = 'avatar'}, image = Social.me.avatar, scale = Style.size.avatar / Widgets.faceSize, accessibilityLabel = 'Open profile'},
+        ui.avatar{part = 'avatar', bind = {image = 'avatar'}, size = Style.size.avatar},
         ui.column{gap = 0, grow = 1,
-            ui.button{part = 'handle', bind = {text = 'handle'}, text = '', variant = 'link', align = 'stretch', justify = 'start', height = 30, style = Widgets.nameLink},
-            ui.button{part = 'name', bind = {text = 'name'}, text = '', variant = 'link', align = 'stretch', justify = 'start', height = 28,
-                style = {colors = {accentText = 'textMuted'}, metrics = {controlPaddingX = 0}, fonts = {button = {size = Style.type.caption, bold = false}}},
-            },
+            ui.label{part = 'handle', bind = {text = 'handle'}, font = 'button', wrap = false},
+            ui.label{part = 'name', bind = {text = 'name'}, font = 'caption', color = 'textMuted', wrap = false},
         },
         ui.button{part = 'follow', bind = {text = 'followText', variant = 'followVariant'}, text = 'Follow', variant = 'primary', height = 48, style = {metrics = {controlPaddingX = space.m}}},
-    }, interactive = false, estimatedSize = 80}
-end
-
--- Profile links and Follow are separate actions, including keyboard activation.
-function Widgets.onPersonEvent(list, event)
-    local person = Social.person(event.cell.item)
-    if event.part == 'follow' then
-        Social.toggleFollow(person)
-        Widgets.describePerson(person)
-        list:reload(person.id)
-    elseif event.part == 'face' or event.part == 'handle' or event.part == 'name' then
-        Widgets.openPerson(person.id)
-    end
+    }, estimatedSize = 80}
 end
 
 -- Fills the texts a row of a person binds.

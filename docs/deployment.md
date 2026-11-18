@@ -1,6 +1,6 @@
 # Build and publish
 
-The website is entirely static. Node.js 22 compiles its HTML and Tailwind CSS 4. GitHub Actions invokes the upstream Haylen compiler to produce each sample, then uploads the entire `dist/` directory to a Cloudflare Pages Direct Upload project.
+The website is entirely static. Node.js 22 compiles its HTML and Tailwind CSS 4. GitHub Actions invokes the upstream Haylen command line to produce each sample, then uploads the entire `dist/` directory to a Cloudflare Pages Direct Upload project.
 
 ## Local website
 
@@ -25,13 +25,15 @@ npx playwright install chromium firefox webkit
 npm test
 ```
 
-The upstream compiler needs Python 3.15, CMake, Ninja and a C++20 toolchain. It installs its pinned Emscripten and other tools. Linux prerequisites are listed in the workflow. The site's runtime and tests use Node.js 22; there are no Python site scripts.
+The upstream `haylen` command runs through [uv](https://docs.astral.sh/uv), which installs the Python and packages that the engine locks. It also needs CMake, Ninja and a C++20 compiler, and it downloads its pinned Emscripten and shader compiler into the engine's `.tools/`. Linux prerequisites are listed in the workflow. The site's runtime and tests use Node.js 22; there are no Python site scripts.
 
-`demos:build` discovers the current `app.json` projects in the engine's `samples/`, reconciles names and categories into the single catalogue at `src/data/samples.json`, and preserves the curated descriptions and images of known projects. New projects in supported categories get their own entry and source link automatically. Unsupported categories fail explicitly. `--only games/tiny-island` is available for focused local builds; production requires every discovered sample.
+`demos:build` discovers the current `haylen.json` projects in the engine's `samples/`, reconciles names and categories into the single catalogue at `src/data/samples.json`, and preserves the curated descriptions and images of known projects. New projects in supported categories get their own entry and source link automatically. Unsupported categories fail explicitly. `--only games/tiny-island` is available for focused local builds; production requires every discovered sample.
 
-The default native configuration is **Release**. The Tests sample exceeds Pages' 25 MiB individual-file limit as a development ZIP. The orchestrator calls Haylen's own release/content builder with its web shard target set to **8 MiB**, leaving room for overhead. This configuration is applied to the imported upstream module in memory because its `run` command does not expose the content builder's `--shard-target` argument. The engine source files remain unchanged. Every copied file is checked against the actual 25 MiB limit. No content is removed, externally hosted or replaced by a fake demo.
+Apps never compile the engine, so the orchestrator first installs the engine SDKs with `haylen sdk build`: the web SDK, with the player and the Emscripten package that release runtimes link, and the desktop SDK of this machine, whose content tool builds protected releases. Then it runs `haylen app build <sample> --target web --config Release --json` for each sample and copies the site folder that the JSON result names, after Haylen's own verification passed.
 
-The native content tool creates disposable keys for these public samples under `.cache/sample-keys/`; no raw key files enter `dist/`, Git or the delivery ZIPs. Supply `HAYLEN_KEYS_DIR` with existing engine keys to retain stable release identities between deployments. Temporary public demo releases do not promise content-update compatibility across builds.
+The default native configuration is **Release**. The Tests sample exceeds Pages' 25 MiB individual-file limit as a development ZIP. Haylen's web content profile sets no shard target, so the orchestrator starts the same command with that profile's target set to **8 MiB** in memory; a shard holds at most twice its target plus one record, which stays under the limit. The engine source files remain unchanged. Every copied file is checked against the actual 25 MiB limit. No content is removed, externally hosted or replaced by a fake demo.
+
+The content tool of the desktop SDK creates disposable keys for these public samples under `.cache/sample-keys/`, which the orchestrator passes as `HAYLEN_KEYS_DIR`, so the Haylen tooling never writes keys into the user's configuration folder; no raw key files enter `dist/`, Git or the delivery ZIPs. Supply `HAYLEN_KEYS_DIR` with existing engine keys to retain stable release identities between deployments. Temporary public demo releases do not promise content-update compatibility across builds.
 
 Native output is staged under `.cache/web-demos-staging/`. A complete successful batch is promoted to `.cache/web-demos/`. A failure exits nonzero and never publishes a partial manifest. The site builder validates HTML entry points, complete WASM modules, file sizes, file counts and catalogue membership before rendering links.
 
@@ -68,6 +70,8 @@ dist/
     apps/online-store/index.html
     apps/photo-social/index.html
     apps/ride-hailing/index.html
+    apps/car-dashboard/index.html
+    apps/smart-home/index.html
     stress/many-sprites/index.html
     stress/many-bodies/index.html
     stress/streamed-map/index.html
@@ -76,7 +80,7 @@ dist/
     cpp/embedding/index.html
 ```
 
-Each demo directory also contains its actual WASM, loader, protected content, plugins and other generated assets. Demo buttons point **directly to that directory's `index.html`** and open a separate tab with `noopener noreferrer`, keeping the gallery open. No iframe, application server or client-side route is required.
+Each demo directory also contains its actual WASM, loader, protected content, plugins and other generated assets. Haylen's runtime would stream content shards by byte range, but Cloudflare Pages answers ranges of uncached `.hpak` files with the whole file, which the runtime refuses. The site builder therefore lists every shard in the loader's `config.json`, so each sample downloads its whole release before it starts and never asks for a range. Demo buttons point **directly to that directory's `index.html`** and open a separate tab with `noopener noreferrer`, keeping the gallery open. No iframe, application server or client-side route is required.
 
 ## GitHub → Cloudflare Pages
 
@@ -101,13 +105,13 @@ The `/web-demos/*` headers retain cross-origin isolation for native sample pages
 
 `/playground/` contains the editor. Its Lua/JSON syntax highlighting, project tree, file/folder operations, drag-and-drop imports, image previews, ZIP imports/exports and IndexedDB saves run locally. Play/Pause/Stop, hot reload and diagnostics talk to the actual editable Haylen player in a disposable iframe. The IDE has generic panels and never supplies game controls. Keyboard, pointer and touch input are implemented by the imported project. The activity rail toggles explorer, code, preview and console, while closing an editor tab preserves its file. Project ZIP import replaces the complete workspace after confirmation.
 
-After compiling the web player upstream, run `npm run playground:runtime -- --engine-dir ../haylen`. The command stages the four official runtime artifacts under ignored `.cache/web-player/`, validates the complete WASM/API and records its digest and available Git provenance. It does not rebuild or patch the engine. The site builder injects this player into `dist/playground/runtime/`. Production sets `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1` and fails when it is missing or invalid; a website-only build retains editing/export with Play disabled.
+After installing the web SDK upstream (`haylen sdk build --target web`, which `demos:build` also runs), run `npm run playground:runtime -- --engine-dir ../haylen`. The command stages the four page-mode runtime files of the SDK's player under ignored `.cache/web-player/`, validates the complete WASM and version 1 of the editor contract, and records its digest, Git revision and SDK source revision. It does not rebuild or patch the engine. The site builder injects this player into `dist/playground/runtime/`. Production sets `HAYLEN_REQUIRE_PLAYGROUND_RUNTIME=1` and fails when it is missing or invalid; a website-only build retains editing/export with Play disabled.
 
 The production workflow stages the player after sample compilation, validates its static bundle and publishes it in the same `dist/` upload. No extra Cloudflare service, API key, database or application server is needed.
 
 The browser service worker caches only the playground and its runtime/shared assets. Wait for **Available offline** before disconnecting. First visits still require a download. Updates activate when old playground tabs close or through the update button in Help; they do not force-reload unsaved work. Files are local to this domain and browser profile. Export ZIPs as backups; clearing browser storage can remove the workspace and offline cache. Use one editing tab per workspace.
 
-The preview can recover ordinary Lua errors. It cannot reliably interrupt an infinite Lua/native loop on the engine's current single thread. C++ and native plugin compilation still use Haylen's normal toolchain.
+The preview talks to the player through Haylen's versioned editor contract. Each project is limited to 1,000 files and 64 MiB in the player as in the editor, and its saved data stays in a storage namespace apart from the gallery samples. The preview recovers ordinary Lua errors, and in development the player stops Lua code that runs past its execution budget with an error and a way to restart. A finalizer that never ends or a native loop can still hold the preview's single thread, so the preview is no hard sandbox. C++ and native plugin compilation still use Haylen's normal toolchain.
 
 Run `npm run test:browser` for simple page-opening smoke checks. These do not execute games or app flows.
 
@@ -119,7 +123,9 @@ Help shows the build date and time in the browser's local time; its tooltip cont
 
 Preview controls offer Fit, smartphone (390 × 844), tablet (768 × 1024) and desktop (1280 × 800) viewports. The existing app frame resizes without restarting and scales to fit the editor. Rotate swaps the viewport width and height without restarting the app. Choosing a preset restores its default orientation. These controls do not emulate physical device hardware. Hiding the console gives its space to the preview. Action Game uses K for dash and J for attacks, with controller and touch bindings kept in its project input file.
 
-Photo Social adapts Haylen’s native Photo Social sample with cartoon artwork, illustrated avatars, stories, posts, comments, profile grids, messages and a three-step composer with crops and filters. The app mounts its rail and bottom bar once; navigation replaces the central content while the shared controls retain their state. Opening a person, post or conversation already in the stack returns to that screen. New Post opens a three-step flow with the shared navigation hidden. Back moves one step, Close returns to the screen that opened it, and publishing clears the flow and opens Home. Login and account creation use delayed local handlers in `source/services/fake-api.lua`. Social records live in `source/data/social.lua`; conversations live in `source/chats.lua`. Example credentials are `alex@example.com` / `explore123`. Everything stays in memory during the running app session; no API server or real account is involved.
+Photo Social is Haylen's Photo Social sample with a sign-in flow added, so it shows how an app moves between screens the way phone and tablet apps do. Signing in and out changes the whole app, so the sign-in flow and the main app are two scenes. Inside the main app the frame mounts once: the rail of a wide window or the bar of icons of a phone stays still while screens slide in the middle, each tab keeps its own stack and scroll, messages show the conversations beside the chat on a wide window, and a new post and the stories open over everything as flows with their own bars. The sign-in flow works the same way, with its picture staying beside the forms.
+
+Sign in, account creation and password resets call [httpbin.org](https://httpbin.org), a public service for testing HTTP clients, over HTTPS from `source/services/accounts.lua`. Sign in uses HTTP Basic authentication and treats status 401 as a wrong password; the other two POST JSON and check the echoed answer. The demo account is `rosa@example.com` / `explore123`. Accounts and social records stay in memory during the running app session, and the sign-in screen asks people to use only the demo account.
 
 ## Search and social previews
 

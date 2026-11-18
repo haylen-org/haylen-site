@@ -23,9 +23,6 @@ Photos.filters = {
 
 -- The pictures: the file, the mean color that stands in while it loads, the subject the close crop centers on, as a share of the picture, and the filter of the close crop.
 Photos.list = {
-    {id = 'coast', file = 'photos/coast.png', tone = '#FF37B7C8', focus = {0.65, 0.5}, filter = 'warm'},
-    {id = 'kyoto', file = 'photos/kyoto.png', tone = '#FF38A383', focus = {0.7, 0.45}, filter = 'vivid'},
-    {id = 'alps', file = 'photos/alps.png', tone = '#FF50B1C1', focus = {0.5, 0.55}, filter = 'cool'},
     {id = 'lake-sunrise', tone = '#FF7A7A8A', focus = {0.7, 0.76}, filter = 'warm'},
     {id = 'beach-umbrella', tone = '#FFB3B1AC', focus = {0.62, 0.72}, filter = 'vivid'},
     {id = 'noodle-soup', tone = '#FFA68350', focus = {0.42, 0.44}, filter = 'warm'},
@@ -50,7 +47,7 @@ for _, filter in ipairs(Photos.filters) do
 end
 
 function Photos.path(id)
-    return Photos.byId[id].file or 'photos/' .. id .. '.jpg'
+    return 'photos/' .. id .. '.jpg'
 end
 
 -- The name of a look of a picture for the UI: `'full'` for the whole picture and `'close'` for the filtered crop around its subject.
@@ -59,10 +56,10 @@ function Photos.look(id, look)
 end
 
 -- The area of the close crop of a picture, in its pixels.
-function Photos.closeArea(photo, image)
+function Photos.closeArea(photo)
     local half = Photos.closeSize / 2
-    local x = math.max(0, math.min(image.width - Photos.closeSize, math.floor(photo.focus[1] * image.width - half)))
-    local y = math.max(0, math.min(image.height - Photos.closeSize, math.floor(photo.focus[2] * image.height - half)))
+    local x = math.max(0, math.min(Photos.size - Photos.closeSize, math.floor(photo.focus[1] * Photos.size - half)))
+    local y = math.max(0, math.min(Photos.size - Photos.closeSize, math.floor(photo.focus[2] * Photos.size - half)))
     return {x, y, Photos.closeSize, Photos.closeSize}
 end
 
@@ -89,7 +86,7 @@ function Photos.start()
         for _, photo in ipairs(Photos.list) do
             local image = Photos.decode(photo.id):await()
             ui.setImage(Photos.look(photo.id, 'full'), Photos.texture(image))
-            local close = image:crop(Photos.closeArea(photo, image)):applyAsync(Photos.filterById[photo.filter].effects):await()
+            local close = image:crop(Photos.closeArea(photo)):applyAsync(Photos.filterById[photo.filter].effects):await()
             ui.setImage(Photos.look(photo.id, 'close'), Photos.texture(close))
         end
     end)

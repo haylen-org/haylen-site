@@ -15,7 +15,7 @@
       "category": "App",
       "description": "A photo-sharing app with a feed, stories, messages, profiles and editable Lua screens.",
       "directory": "examples/photo-social",
-      "preview": "content/photos/coast.png"
+      "preview": "content/photos/lake-sunrise.jpg"
     }
   ]
 }

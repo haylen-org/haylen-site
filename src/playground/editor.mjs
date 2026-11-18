@@ -88,7 +88,7 @@ $('#clear-console').addEventListener('click', () => {
 
 function updateProjectName() {
   try {
-    $('#project-name').textContent = JSON.parse(project.text('app.json')).name || 'Untitled project';
+    $('#project-name').textContent = JSON.parse(project.text('haylen.json')).name || 'Untitled project';
   } catch {
     $('#project-name').textContent = 'Your project';
   }
@@ -199,7 +199,7 @@ function makeState(path) {
             editorStates.set(active, update.state);
             remember();
             queueChanges();
-            if (active === 'app.json') updateProjectName();
+            if (active === 'haylen.json') updateProjectName();
             showSize();
           } catch (error) {
             status(error.message + ' Export a backup before continuing.');
@@ -601,11 +601,15 @@ document.addEventListener('keydown', (event) => {
     expandPreview(false);
 });
 function validateProject() {
-  if (!project.files.has('app.json') || !project.files.has('source/main.lua'))
+  if (!project.files.has('haylen.json') && project.files.has('app.json'))
     throw new Error(
-      'Check your project files: place app.json at the top level and main.lua inside the source folder.',
+      'Haylen now reads the project settings from haylen.json. Rename app.json to haylen.json, then press Play.',
     );
-  JSON.parse(project.text('app.json'));
+  if (!project.files.has('haylen.json') || !project.files.has('source/main.lua'))
+    throw new Error(
+      'Check your project files: place haylen.json at the top level and main.lua inside the source folder.',
+    );
+  JSON.parse(project.text('haylen.json'));
 }
 async function play(fresh = false) {
   if (!runtimeAvailable || booting || busy) return;
@@ -664,9 +668,9 @@ function applyChanges() {
   // audio/context work from a previous app in the WebKit player.
   if (
     files.some(
-      ([path]) => path === 'app.json' || path === 'source/main.lua' || /\.(ttf|otf|ttc)$/.test(path),
+      ([path]) => path === 'haylen.json' || path === 'source/main.lua' || /\.(ttf|otf|ttc)$/.test(path),
     ) ||
-    removed.some((path) => path.endsWith('.lua'))
+    removed.some((path) => path === 'haylen.json' || path.endsWith('.lua'))
   ) {
     play(true);
     return;
@@ -728,10 +732,9 @@ function handleRuntime({ type, detail }) {
   if (type === 'reloaded') {
     awaitingReload = false;
     clearTimeout(reloadWatch);
-    log(
-      detail.restarted ? 'Restarting the preview to apply your changes.' : 'Changes applied to the preview.',
-      'success',
-    );
+    // A rejected file already reported its error, with the file and the line to fix.
+    if (detail.restarted) log('Restarting the preview to apply your changes.', 'success');
+    else if (!detail.rejected?.length) log('Changes applied to the preview.', 'success');
     if (!detail.restarted && runtimeState === 'error' && detail.resumed) setRuntimeState('running');
     // Returning to the last successful module bytes can produce an empty report
     // while the upstream player still holds its old error. A fresh Run recovers.
@@ -742,6 +745,7 @@ function handleRuntime({ type, detail }) {
       !detail.restarted &&
       !detail.resumed &&
       !detail.modules?.length &&
+      !detail.restored?.length &&
       !detail.assets?.length
     ) {
       reloadFromError = false;

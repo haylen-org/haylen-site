@@ -32,9 +32,6 @@ Social.me = {id = 'me', name = 'Rosa Almeida', handle = 'rosa.almeida', bio = 'C
 
 -- What the posts of each picture say, for the whole picture and for its close crop, and where they were taken.
 Social.captions = {
-    ['coast'] = {place = 'Amalfi Coast', full = 'A colorful little corner of the coast.', close = 'Taking the long way down to the sea.'},
-    ['kyoto'] = {place = 'Kyoto', full = 'A quiet morning in the garden.', close = 'All the colors reflected in the water.'},
-    ['alps'] = {place = 'The Dolomites', full = 'One long walk. One incredible view.', close = 'The little cabin by the lake.'},
     ['lake-sunrise'] = {place = 'Mirror Lake', full = 'Woke up at five for this light. Worth every minute.', close = 'Our little red canoe, waiting at the pier.'},
     ['beach-umbrella'] = {place = 'Coral Bay', full = 'Salt in the hair, sand everywhere, no complaints.', close = 'Hat, towel, ocean. That is the whole plan.'},
     ['noodle-soup'] = {place = 'Lantern Street', full = 'Found the best noodle soup in town, and I am not sharing the address.', close = 'The egg was perfect. Ten out of ten.'},
@@ -141,6 +138,7 @@ end
 -- Adds a post of a person with one look, or with several pages of looks, posted some hours ago, and the comments it starts with.
 function Social.addPost(random, author, first, pages, hours)
     local number = #Social.posts + 1
+    Social.lastPost = number
     local caption = Social.captions[first.photo]
     local post = {
         id = 'post-' .. number,
@@ -154,6 +152,7 @@ function Social.addPost(random, author, first, pages, hours)
         age = Social.age(hours),
         liked = random:chance(0.2),
         comments = {},
+        lastComment = 0,
     }
     if pages then
         post.pages = {}
@@ -175,10 +174,12 @@ function Social.addPost(random, author, first, pages, hours)
     return post
 end
 
+-- A comment of a writer, with an id that no other comment of the post had, and the type of the template that shows it, with a menu for the person's own.
 function Social.newComment(post, writer, text, age, likes)
+    post.lastComment = post.lastComment + 1
     return {
-        id = post.id .. '-comment-' .. (#post.comments + 1),
-        type = 'comment',
+        id = post.id .. '-comment-' .. post.lastComment,
+        type = writer.me and 'myComment' or 'comment',
         author = writer.id,
         avatar = writer.avatar,
         markup = '[b]' .. writer.handle .. '[/b]  ' .. text,
@@ -247,11 +248,36 @@ function Social.comment(post, text)
     return comment
 end
 
+function Social.deleteComment(post, comment)
+    Social.removeFrom(post.comments, comment)
+    post.commentCount = post.commentCount - 1
+    Social.describe(post)
+    events.emit('socialChanged', post)
+end
+
+-- Takes a post of the person out of the feed, the profile and the saved posts.
+function Social.deletePost(post)
+    Social.removeFrom(Social.posts, post)
+    Social.removeFrom(Social.byId[post.author].posts, post)
+    Social.postById[post.id] = nil
+    Social.saved[post.id] = nil
+    events.emit('socialChanged', post)
+end
+
+function Social.removeFrom(list, value)
+    for index, other in ipairs(list) do
+        if other == value then
+            table.remove(list, index)
+            return
+        end
+    end
+end
+
 -- Publishes a post of the person who uses the app with a picture made at run time, at the top of the feed and the profile.
 function Social.publish(image, text, place)
     local me = Social.me
-    local number = #Social.posts + 1
-    local post = {id = 'post-' .. number, type = 'post', author = 'me', photo = image, place = place ~= '' and place or 'Home', text = text ~= '' and text or 'A new day.', likes = 0, hours = 0, age = 'Now', liked = false, comments = {}, commentCount = 0}
+    Social.lastPost = Social.lastPost + 1
+    local post = {id = 'post-' .. Social.lastPost, type = 'post', author = 'me', photo = image, place = place ~= '' and place or 'Home', text = text ~= '' and text or 'A new day.', likes = 0, hours = 0, age = 'Now', liked = false, comments = {}, lastComment = 0, commentCount = 0}
     Social.describe(post)
     table.insert(Social.posts, 1, post)
     table.insert(me.posts, 1, post)

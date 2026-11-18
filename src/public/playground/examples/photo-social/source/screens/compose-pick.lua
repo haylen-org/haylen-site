@@ -9,26 +9,24 @@ local Shell = require('shell')
 local Style = require('style')
 
 local ComposePick = haylen.class('ComposePick', Page)
-ComposePick.composerScreen = true
 
-ComposePick.backTransition = {duration = 0.3, effect = 'push', direction = 'down', ease = 'cubicOut'}
+-- The bar of the new post shows the title and the action of the step on top of its stack.
+ComposePick.title = 'New post'
+ComposePick.actionText = 'Next'
 
-function ComposePick:enter()
+function ComposePick:tree()
     Compose.begin()
-    self:mountGui(ui.column{gap = 0, onCancel = Shell.back,
-        Shell.header('New post', {
-            ui.button{id = 'next', text = 'Next', variant = 'link', onClick = function()
-                self:next()
-            end},
-        }, {close = true, onBack = Shell.closeCompose}),
-        ui.column{id = 'body', grow = 1, gap = 0},
-    })
+    return ui.column{id = 'body', grow = 1, gap = 0}
+end
+
+function ComposePick:action()
+    self:next()
 end
 
 function ComposePick:layoutChanged(wide)
     local space = Style.space
     local preview = ui.image{id = 'preview', image = Compose.look(), fit = 'cover', aspectRatio = 1, accessibilityLabel = 'The chosen picture'}
-    local grid = ui.collection{id = 'library', grow = 1, scrollbar = false, layout = 'grid', lanes = wide and 3 or 4, cellAspect = 1, gap = space.xxs, selection = 'single', selected = {Compose.photo}, rememberFocus = true,
+    local grid = ui.collection{id = 'library', grow = 1, layout = 'grid', lanes = wide and 3 or 4, cellAspect = 1, gap = space.xxs, selection = 'single', selected = {Compose.photo}, rememberFocus = true,
         types = {photo = {template = ui.stack{align = 'stretch',
             ui.image{part = 'photo', bind = {image = 'photo'}, image = Compose.look(), fit = 'cover', align = 'stretch'},
             ui.row{align = 'stretch', alignItems = 'start', padding = space.xs, ui.spacer{grow = 1}, ui.image{part = 'picked', bind = {visible = '$selected'}, image = 'images/picked.svg', width = 36, height = 36, visible = false, accessibilityHidden = true}},
@@ -39,10 +37,10 @@ function ComposePick:layoutChanged(wide)
     }
     local body
     if wide then
-        preview.grow, preview.align = 1, 'start'
+        preview.grow, preview.align = 1, 'center'
         body = ui.row{grow = 1, gap = space.l, padding = space.l, align = 'stretch',
             preview,
-            ui.column{width = 480, gap = space.s, align = 'stretch', ui.label{text = 'Your pictures', font = 'button', color = 'textMuted'}, grid},
+            ui.column{width = 480, gap = space.s, ui.label{text = 'Your pictures', font = 'button', color = 'textMuted'}, grid},
         }
     else
         preview.align = 'stretch'
@@ -66,7 +64,7 @@ function ComposePick:pick(id)
 end
 
 function ComposePick:next()
-    Shell.open(require('screens.compose-edit'))
+    self.stack:push(require('screens.compose-edit')())
 end
 
 return ComposePick

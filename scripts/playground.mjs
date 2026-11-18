@@ -53,7 +53,7 @@ export async function buildPlayground(root, dist) {
     const files = [];
     for await (const file of filesUnder(source))
       files.push(path.relative(source, file).split(path.sep).join('/'));
-    for (const required of ['app.json', 'source/main.lua', example.preview])
+    for (const required of ['haylen.json', 'source/main.lua', example.preview])
       if (!files.includes(required)) throw new Error(`Example ${example.id} is missing ${required}.`);
     example.files = files.sort();
   }

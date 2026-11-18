@@ -11,33 +11,44 @@ local Widgets = require('widgets')
 
 local Home = haylen.class('Home', Page)
 
-function Home:enter()
+function Home:tree()
     local space = Style.space
-    self:mountGui(ui.column{grow = 1, gap = 0,
+    return ui.column{grow = 1, gap = 0,
         ui.column{id = 'topBar', gap = 0,
             ui.row{height = Style.size.header, padding = {0, space.xs, 0, space.m}, Shell.wordmark(44), ui.spacer{grow = 1},
                 ui.button{id = 'explore', icon = Shell.icon('search'), iconColor = 'text', variant = 'icon', accessibilityLabel = 'Explore', tooltip = 'Explore', onClick = function()
-                    Shell.showTab('explore', {focus = true})
+                    Shell.showTab('explore')
+                    Shell.navigation.current.screens[1]:focusSearch()
                 end},
             },
             ui.divider{},
         },
         ui.row{id = 'body', grow = 1, gap = 0, align = 'stretch'},
-        Widgets.friendDialog(self),
-    })
+    }
+end
+
+-- The feed follows the posts that change, arrive or go away, and the people to follow show whom the person follows.
+function Home:start()
     events.on('socialChanged', function(changed)
-        if self.feed and Social.post(changed.id) == changed then
-            self.feed:setItems(Social.feed())
-            if self.feed:indexOf(changed.id) then
-                self.feed:reload(changed.id)
+        if not self.feed then
+            return
+        end
+        if Social.person(changed.id) == changed then
+            if self.gui:has('suggested') then
+                Widgets.showFollow(self.gui:collection('suggested'), changed)
             end
+            return
+        end
+        self.feed:setItems(Social.feed())
+        if self.feed:indexOf(changed.id) then
+            self.feed:reload(changed.id)
         end
     end, {owner = self})
 end
 
 function Home:layoutChanged(wide, roomy)
     local state = self.feed and self.feed:saveState()
-    self.gui:set('topBar', {visible = not self.chromeWide})
+    self.gui:set('topBar', {visible = not wide})
     self.gui:replaceChildren('body', {self:body(wide, roomy)})
     self.stories = self.gui:collection('stories')
     self.feed = self.gui:collection('feed')
@@ -61,7 +72,7 @@ function Home:body(wide, roomy)
             end,
         },
         ui.divider{},
-        ui.collection{id = 'feed', grow = 1, gap = wide and space.l or 0, padding = wide and {space.l, 0, space.xl, 0} or {0, 0, space.l, 0}, scrollbar = false, rememberFocus = true,
+        ui.collection{id = 'feed', grow = 1, gap = wide and space.l or 0, padding = wide and {space.l, 0, space.xl, 0} or {0, 0, space.l, 0}, scrollbar = wide, rememberFocus = true,
             types = {post = Widgets.post(wide), gallery = Widgets.post(wide, true)},
             onClick = function(event)
                 Widgets.onPostEvent(self, self.feed, event)
@@ -101,7 +112,10 @@ function Home:side()
         ui.label{text = 'People to follow', font = 'button', color = 'textMuted', margin = {space.s, 0, 0, 0}},
         ui.collection{id = 'suggested', height = 80 * 5, gap = 0, scrollbar = false, types = {person = Widgets.person()},
             onClick = function(event)
-                Widgets.onPersonEvent(self.gui:collection('suggested'), event)
+                Widgets.toggleFollow(Social.person(event.cell.item))
+            end,
+            onSelect = function(event)
+                Widgets.openPerson(event.item)
             end,
         },
     }
@@ -130,19 +144,21 @@ end
 
 function Home:openStory(id)
     if id == 'mine' then
-        Shell.showTab('create')
+        Shell.compose()
         return
     end
     for index, story in ipairs(Social.stories) do
         if story.id == id then
-            Shell.open(require('screens.story'), {index = index}, Shell.riseTransition)
+            Shell.openStory(index, function()
+                self:showSeenStories()
+            end)
             return
         end
     end
 end
 
 -- Shows the stories seen while the viewer was open inside the gray ring.
-function Home:resume()
+function Home:showSeenStories()
     if self.stories then
         self.stories:setItems(self:storyItems())
         self.stories:reload(self:storyIds())

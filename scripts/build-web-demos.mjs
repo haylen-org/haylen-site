@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { cp, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,16 +7,81 @@ import { samplePathPattern, verifyDemo } from './demo-artifacts.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
-export function desktopContentTool(engine, platform = process.platform, arch = process.arch) {
-  const host = { darwin: 'macos', linux: 'linux', win32: 'windows' }[platform];
-  if (!host || !['arm64', 'x64'].includes(arch))
+// Haylen keeps its app settings in `haylen.json` at the root of each app folder.
+export const appManifest = 'haylen.json';
+
+// The upstream web profile has no shard target, so a release could hold one large
+// shard. Eight MiB targets keep each shard (at most twice the target plus one record)
+// well under Cloudflare Pages' 25 MiB file limit without changing engine sources.
+const webShardTargetBytes = 8 * 1024 ** 2;
+const webShardTarget = [
+  'from haylen.content.content_profile import ContentProfile',
+  `ContentProfile.SHARD_TARGETS["web"] = ${webShardTargetBytes}`,
+  'from haylen.cli.application import Application',
+  'Application.main()',
+].join('\n');
+
+// The desktop SDK carries the content tool. Upstream builds it with `player` on macOS
+// and with the target of the system on Linux and Windows.
+export function desktopSdkTarget(platform = process.platform) {
+  const target = { darwin: 'player', linux: 'linux', win32: 'windows' }[platform];
+  if (!target) throw new Error(`Unsupported host for native sample builds: ${platform}`);
+  return target;
+}
+
+// Finds `haylen-content` among the host tools of the installed desktop SDK, by the
+// system and architecture names that the Haylen tooling records.
+export async function desktopContentTool(engine, platform = process.platform, arch = process.arch) {
+  const system = { darwin: 'macos', linux: 'linux', win32: 'windows' }[platform];
+  const architecture = { arm64: 'arm64', x64: 'x86_64' }[arch];
+  if (!system || !architecture)
     throw new Error(`Unsupported host for native sample content keys: ${platform}/${arch}`);
-  return path.join(
-    engine,
-    'build/artifacts/desktop',
-    `${host}-${arch}`,
-    platform === 'win32' ? 'haylen-content.exe' : 'haylen-content',
+  const sdk = path.join(engine, 'build/sdk/desktop-release');
+  const manifestFile = path.join(sdk, 'haylen-sdk.json');
+  if (!existsSync(manifestFile)) throw new Error(`The Haylen desktop SDK was not installed: ${sdk}`);
+  const manifest = JSON.parse(await readFile(manifestFile, 'utf8'));
+  const tool = manifest.hostTools?.find(
+    (entry) =>
+      entry.name === 'haylen-content' && entry.system === system && entry.architecture === architecture,
   );
+  if (!tool) throw new Error(`The Haylen desktop SDK has no content tool for ${system}-${architecture}`);
+  const file = path.join(sdk, tool.path);
+  if (!existsSync(file)) throw new Error(`Haylen content tool was not generated: ${file}`);
+  return file;
+}
+
+export function isHaylenCheckout(engine) {
+  return ['haylen', 'pyproject.toml', 'tools/haylen'].every((name) => existsSync(path.join(engine, name)));
+}
+
+// Runs the Haylen command line through uv from the engine checkout, as its own launcher
+// does. A web release build loads the shard target before the command starts.
+export function runHaylen(engine, args, { env = process.env, jobs, webRelease = false, json = false } = {}) {
+  const entry = webRelease ? ['python', '-c', webShardTarget] : ['haylen'];
+  const options = ['--verbose', ...(jobs ? ['--jobs', String(jobs)] : []), ...(json ? ['--json'] : [])];
+  const result = spawnSync('uv', ['run', '--project', engine, '--frozen', ...entry, ...options, ...args], {
+    cwd: engine,
+    env,
+    stdio: ['ignore', json ? 'pipe' : 'inherit', 'inherit'],
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 ** 2,
+  });
+  if (result.error || (result.status !== 0 && !json))
+    throw new Error(`Haylen failed (${result.error?.message ?? result.status}). Nothing will be published.`);
+  if (!json) return null;
+  let answer;
+  try {
+    answer = JSON.parse(result.stdout);
+  } catch {
+    throw new Error(
+      `Haylen did not answer with JSON (exit code ${result.status}). Nothing will be published.`,
+    );
+  }
+  if (!answer.ok)
+    throw new Error(
+      `Haylen failed: ${answer.error?.message ?? JSON.stringify(answer.error)}. Nothing will be published.`,
+    );
+  return answer.result;
 }
 
 function parseArguments(args) {
@@ -47,15 +111,15 @@ export async function discoverSamples(engine, catalogueFile = path.join(root, 's
     if (!entry.isDirectory()) continue;
     const category = categories[entry.name];
     const parent = path.join(samplesDir, entry.name);
-    const paths = existsSync(path.join(parent, 'app.json'))
+    const paths = existsSync(path.join(parent, appManifest))
       ? [entry.name]
       : (await readdir(parent, { withFileTypes: true }))
-          .filter((child) => child.isDirectory() && existsSync(path.join(parent, child.name, 'app.json')))
+          .filter((child) => child.isDirectory() && existsSync(path.join(parent, child.name, appManifest)))
           .map((child) => `${entry.name}/${child.name}`);
     for (const slug of paths) {
       if (!category || !samplePathPattern.test(slug))
         throw new Error(`New sample requires a supported category/path: ${slug}`);
-      const app = JSON.parse(await readFile(path.join(samplesDir, slug, 'app.json'), 'utf8'));
+      const app = JSON.parse(await readFile(path.join(samplesDir, slug, appManifest), 'utf8'));
       if (typeof app.name !== 'string' || !app.name.trim()) throw new Error(`Missing sample name: ${slug}`);
       const existing = metadata.find((sample) => sample.path === slug);
       discovered.set(slug, {
@@ -80,12 +144,35 @@ export async function discoverSamples(engine, catalogueFile = path.join(root, 's
   return ordered;
 }
 
+// Public demo releases use disposable keys under `.cache/sample-keys/`. With
+// HAYLEN_KEYS_DIR set, the Haylen tooling never creates keys itself.
+async function createSampleKeys(engine, samples) {
+  const tool = await desktopContentTool(engine);
+  const keys = path.join(root, '.cache/sample-keys');
+  for (const sample of samples) {
+    const app = JSON.parse(await readFile(path.join(engine, 'samples', sample.path, appManifest), 'utf8'));
+    if (!/^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9-]+)+$/.test(app.identifier))
+      throw new Error(`Invalid app identifier: ${sample.path}`);
+    const directory = path.join(keys, app.identifier);
+    if (existsSync(path.join(directory, 'keys.json'))) continue;
+    const result = spawnSync(tool, ['keys', 'create', directory, '--identifier', app.identifier], {
+      cwd: engine,
+      stdio: 'inherit',
+    });
+    if (result.error || result.status !== 0)
+      throw new Error(
+        `Could not create disposable public sample keys: ${sample.path} (${result.error?.message ?? `exit code ${result.status}`})`,
+      );
+  }
+  return keys;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const engine = await realpath(options.engineDir);
   const output = path.join(root, '.cache/web-demos');
   const staging = path.join(root, '.cache/web-demos-staging');
-  if (!existsSync(path.join(engine, 'haylen.py'))) throw new Error(`Not a Haylen checkout: ${engine}`);
+  if (!isHaylenCheckout(engine)) throw new Error(`Not a Haylen checkout: ${engine}`);
   const samples = await discoverSamples(engine);
   const only = new Set(options.only);
   for (const slug of only)
@@ -99,79 +186,37 @@ async function main() {
     schemaVersion: 1,
     engineRevision: revision.status === 0 ? revision.stdout.trim() : null,
     configuration: options.config,
-    shardTargetBytes: options.config === 'Release' ? 8 * 1024 ** 2 : null,
+    shardTargetBytes: options.config === 'Release' ? webShardTargetBytes : null,
     samples: {},
   };
 
-  const python = process.env.HAYLEN_PYTHON || 'python3';
-  const runEngine = (args, env = process.env, release = false) => {
-    // Haylen exposes the shard target on its content builder, but not on `run`.
-    // Configure that upstream module in memory. Eight MiB targets leave room for
-    // its bounded shard overhead under Cloudflare Pages' 25 MiB file limit.
-    const entry = release
-      ? ['-c', 'import haylen; haylen.CONTENT_SHARD_TARGETS["web"] = 8 * 1024**2; haylen.main()']
-      : [path.join(engine, 'haylen.py')];
-    const result = spawnSync(python, [...entry, '--verbose', ...args], {
-      cwd: engine,
-      stdio: 'inherit',
-      env,
-    });
-    if (result.error || result.status !== 0)
-      throw new Error(
-        `Haylen failed (${result.error?.message ?? result.status}). Nothing will be published.`,
-      );
-  };
+  // Apps never compile the engine. The web SDK carries the player and the Emscripten
+  // package that release runtimes link, and protected releases need the content tool
+  // of the desktop SDK of this machine.
+  const jobs = options.jobs;
+  runHaylen(engine, ['sdk', 'build', '--target', 'web', '--config', 'Release'], { jobs });
   let buildEnv = process.env;
-  if (options.config === 'Release' && !process.env.HAYLEN_KEYS_DIR) {
-    const tool = desktopContentTool(engine);
-    runEngine(['engine', '--platform', 'desktop', '--config', 'Release', '--jobs', String(options.jobs)]);
-    if (!existsSync(tool)) throw new Error(`Haylen content tool was not generated: ${tool}`);
-    const keys = path.join(root, '.cache/sample-keys');
-    for (const sample of chosen) {
-      const app = JSON.parse(await readFile(path.join(engine, 'samples', sample.path, 'app.json'), 'utf8'));
-      if (!/^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9-]+)+$/.test(app.identifier))
-        throw new Error(`Invalid app identifier: ${sample.path}`);
-      const directory = path.join(keys, app.identifier);
-      if (existsSync(path.join(directory, 'keys.json'))) continue;
-      const result = spawnSync(tool, ['keys', 'create', directory, '--identifier', app.identifier], {
-        cwd: engine,
-        stdio: 'inherit',
-      });
-      if (result.error || result.status !== 0)
-        throw new Error(
-          `Could not create disposable public sample keys: ${sample.path} (${result.error?.message ?? `exit code ${result.status}`})`,
-        );
-    }
-    buildEnv = { ...process.env, HAYLEN_KEYS_DIR: keys };
+  if (options.config === 'Release') {
+    runHaylen(engine, ['sdk', 'build', '--target', desktopSdkTarget(), '--config', 'Release'], { jobs });
+    if (!process.env.HAYLEN_KEYS_DIR)
+      buildEnv = { ...process.env, HAYLEN_KEYS_DIR: await createSampleKeys(engine, chosen) };
   }
 
   for (const sample of chosen) {
     const app = await realpath(path.join(engine, 'samples', sample.path));
     console.log(`\nBuilding ${sample.path}`);
-    // Python belongs to the upstream Haylen compiler. The website uses only Node.js.
-    runEngine(
-      [
-        'run',
-        app,
-        '--platform',
-        'web',
-        '--config',
-        options.config,
-        '--build-only',
-        '--jobs',
-        String(options.jobs),
-      ],
-      buildEnv,
-      options.config === 'Release',
-    );
-    const hash = createHash('sha256').update(app).digest('hex').slice(0, 8);
-    const source = path.join(
-      engine,
-      'build',
-      sample.category === 'C++' ? 'cpp' : 'apps',
-      `${path.basename(app)}-${hash}`,
-      'web',
-    );
+    // Python belongs to the upstream Haylen tooling. The website uses only Node.js.
+    const built = runHaylen(engine, ['app', 'build', app, '--target', 'web', '--config', options.config], {
+      env: buildEnv,
+      jobs,
+      json: true,
+      webRelease: options.config === 'Release',
+    });
+    const source = built?.product?.path;
+    if (typeof source !== 'string' || !path.isAbsolute(source) || !existsSync(source))
+      throw new Error(`Haylen reported no site folder for ${sample.path}`);
+    if (built.verification?.passed !== true)
+      throw new Error(`Haylen did not verify the web build of ${sample.path}`);
     await verifyDemo(source);
     const destination = path.join(staging, sample.path);
     await mkdir(path.dirname(destination), { recursive: true });
@@ -180,7 +225,6 @@ async function main() {
     console.log(`Verified ${sample.path}/index.html and WebAssembly assets`);
   }
   await writeFile(path.join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  const { rename } = await import('node:fs/promises');
   await rename(staging, output);
   console.log(`\nWebAssembly builds ready: ${chosen.length}/${chosen.length}`);
 }

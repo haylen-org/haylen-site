@@ -9,31 +9,29 @@ local Social = require('data.social')
 local Style = require('style')
 
 local ComposeShare = haylen.class('ComposeShare', Page)
-ComposeShare.composerScreen = true
 
-function ComposeShare:enter()
+ComposeShare.title = 'New post'
+ComposeShare.actionText = 'Share'
+
+function ComposeShare:action()
+    self:share()
+end
+
+function ComposeShare:tree()
     local space = Style.space
-    self.caption, self.place = Compose.caption, Compose.place
-    self:mountGui(ui.column{gap = 0, onCancel = Shell.back,
-        Shell.header('New post', {
-            ui.button{icon = Shell.icon('close'), variant = 'icon', accessibilityLabel = 'Close new post', onClick = Shell.closeCompose},
-            ui.button{id = 'shareTop', text = 'Share', variant = 'link', onClick = function()
-                self:share()
-            end},
-        }),
+    self.caption, self.place = '', ''
+    return ui.column{gap = 0,
         ui.scroll{grow = 1, height = 0,
             Shell.centered(720, ui.column{gap = space.l, padding = {space.l, space.m, space.xl, space.m},
                 ui.image{id = 'thumb', image = Compose.texture and Compose.preview or Compose.look(), fit = 'cover', aspectRatio = 1, maxWidth = 360, align = 'center', radius = Style.radius.photo, accessibilityLabel = 'The picture of the post'},
                 ui.formField{label = 'Caption',
-                    ui.textArea{id = 'caption', value = self.caption, placeholder = 'Write a caption', maxLength = 200, rows = 3, onChange = function(event)
+                    ui.textArea{id = 'caption', placeholder = 'Write a caption', maxLength = 200, rows = 3, onChange = function(event)
                         self.caption = event.value
-                        Compose.caption = event.value
                     end},
                 },
                 ui.formField{label = 'Place', help = 'Where the picture was taken.',
-                    ui.textField{id = 'place', value = self.place, placeholder = 'Add a place', maxLength = 40, autocapitalize = 'words', returnKey = 'done', onChange = function(event)
+                    ui.textField{id = 'place', placeholder = 'Add a place', maxLength = 40, autocapitalize = 'words', returnKey = 'done', onChange = function(event)
                         self.place = event.value
-                        Compose.place = event.value
                     end},
                 },
                 ui.button{id = 'share', text = 'Share', variant = 'primary', align = 'stretch', onClick = function()
@@ -41,21 +39,13 @@ function ComposeShare:enter()
                 end},
             }),
         },
-    })
+    }
 end
 
 function ComposeShare:share()
-    -- Navigation is deferred, so reserve submission before publishing the post.
-    if self.sharing then
-        return
-    end
-    if not Shell.finishCompose() then
-        return
-    end
-    self.sharing = true
-    self.gui:set('share', {enabled = false})
-    self.gui:set('shareTop', {enabled = false})
     local post = Social.publish(Compose.finish(), self.caption:match('^%s*(.-)%s*$'), self.place:match('^%s*(.-)%s*$'))
+    Shell.presented:dismiss()
+    Shell.showTab('home')
     Shell.notify('Your post is shared.', 'success')
     return post
 end

@@ -83,9 +83,13 @@ export function unpack(bytes) {
             else files.push([path, content]);
           }
           const project = new Project(files, folders);
-          if (!project.files.has('app.json') || !project.files.has('source/main.lua'))
+          if (!project.files.has('haylen.json') && project.files.has('app.json'))
             throw new Error(
-              'This ZIP needs app.json at the top level and main.lua inside a source folder. Do not wrap the project in an extra folder.',
+              'This ZIP has app.json from an older Haylen project. Rename it to haylen.json, create the ZIP again and import it.',
+            );
+          if (!project.files.has('haylen.json') || !project.files.has('source/main.lua'))
+            throw new Error(
+              'This ZIP needs haylen.json at the top level and main.lua inside a source folder. Do not wrap the project in an extra folder.',
             );
           resolve(project);
         } catch (reason) {
